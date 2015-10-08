@@ -81,7 +81,7 @@ class VpnApp(App):
         pass
     
     def send_msg(self,btn):
-        message = 'hello'
+        message = self.chat_input.text
         self.clientSocket.send(message.encode('utf-8'))
         modifiedSentence = self.clientSocket.recv(1024)
         print ('From Server:', modifiedSentence)
