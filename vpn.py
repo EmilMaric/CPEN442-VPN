@@ -69,6 +69,9 @@ class VpnApp(App):
             '''waits until client initiates TCP connection'''
             while (1):
                 self.connectionSocket, addr = self.serverSocket.accept()
+                break;
+            '''keeps existing connection alive'''
+            while(1):
                 sentence = self.connectionSocket.recv(1024)
                 capitalizedSentence = sentence.decode('utf-8').upper()
                 print(capitalizedSentence)

@@ -6,6 +6,8 @@ serverSocket.listen(1)
 print ('The server is ready to receive')
 while (1):
     connectionSocket, addr = serverSocket.accept()
+    break;
+while(1):
     sentence = connectionSocket.recv(1024)
     capitalizedSentence = sentence.decode('utf-8').upper()
     print(capitalizedSentence)
