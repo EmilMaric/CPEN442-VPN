@@ -85,9 +85,14 @@ class VpnApp(App):
     
     def send_msg(self,btn):
         message = self.chat_input.text
+        self.chat_panel.text += 'SENT: '+message+'\n'
         self.clientSocket.send(message.encode('utf-8'))
         modifiedSentence = self.clientSocket.recv(1024)
+        self.chat_panel.text += 'RECEIVED: '+modifiedSentence+'\n'
         print ('From Server:', modifiedSentence)
+        self.chat_input.text=''
+        '''clears text input'''
+
 
     def build(self):
         root = BoxLayout(orientation="horizontal",
@@ -149,6 +154,7 @@ class VpnApp(App):
                                  size=(0, 50),
                                  size_hint=(1, None))
         self.chat_input = TextInput(size_hint=(0.8, 1))
+        self.chat_input.bind(on_text_validate=self.send_msg)
         self.input_button = Button(size_hint=(0.2, 1),
                               text="Send")
         self.input_button.bind(on_press=self.send_msg)
