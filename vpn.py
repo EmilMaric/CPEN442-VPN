@@ -10,19 +10,8 @@ from kivy.uix.textinput import TextInput
 from kivy.uix.togglebutton import ToggleButton
 from kivy.uix.button import Button
 
-from socket import *
-'''
-def connect_fnc(self):
-    serverName = '192.168.1.75'
-    serverPort = 12000
-    clientSocket = socket(AF_INET, SOCK_STREAM)
-    clientSocket.connect((serverName,serverPort))
-    sentence = 'hello'
-    clientSocket.send(sentence.encode('utf-8'))
-    modifiedSentence = clientSocket.recv(1024)
-    print ('From Server:', modifiedSentence)
-    clientSocket.close()
-'''
+import TCPconnection
+
 class ColoredBoxLayout(BoxLayout):
 
     def __init__(self, background_color=(160,160,160,0.5), **kwargs):
@@ -41,6 +30,23 @@ class ColoredBoxLayout(BoxLayout):
 
 
 class VpnApp(App):
+    
+    def connect_fnc(self, btn):
+        #if self.TCPconn != None:
+        if self.servermode.state == 'down':
+            self.TCPconn = TCPconnection.TCPconnection(True, '', int(self.port_textinput.text))
+        else:
+            self.TCPconn = TCPconnection.TCPconnection(False, self.ip_textinput.text, int(self.port_textinput.text))
+        addr = self.TCPconn.connect()
+        if (addr):
+            if self.clientmode.state == 'down':
+                self.chat_panel.text += "Connected to "+self.ip_textinput.text+" at port "+self.port_textinput.text+"\n"
+            else:
+                self.chat_panel.text += "Connected to client "+str(addr)+"\n"
+        else:
+            self.chat_panel.text+="Failed to connect. Please check your parameters and try again \n"
+
+    
     def SettingsEntry(self,text=None):
         boxlayout = BoxLayout(orientation="vertical", padding=30)
         self.label = Label(text=text, size=(300, 50),size_hint=(1, None))
@@ -48,51 +54,6 @@ class VpnApp(App):
         self.textinput = TextInput(multiline=False, size=(300, 50), size_hint=(1, None))
         boxlayout.add_widget(self.textinput)
         return boxlayout
-    
-    def connect_fnc(self, btn):
-        serverPort = int(self.port_textinput.text)
-        if(self.clientmode.state=='down'):
-            serverName = self.ip_textinput.text
-            self.clientSocket = socket(AF_INET, SOCK_STREAM)
-            self.clientSocket.connect((serverName,serverPort))
-            '''sentence = 'hello'
-            self.clientSocket.send(sentence.encode('utf-8'))
-            modifiedSentence = self.clientSocket.recv(1024)
-            print ('From Server:', modifiedSentence)
-            self.clientSocket.close()'''
-        else:
-            self.serverSocket = socket(AF_INET,SOCK_STREAM)
-            self.serverSocket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-            self.serverSocket.bind(('',serverPort))
-            self.serverSocket.listen(1)
-            print ('The server is ready to receive')
-            '''waits until client initiates TCP connection'''
-            while (1):
-                self.connectionSocket, addr = self.serverSocket.accept()
-                break;
-            '''keeps existing connection alive'''
-            while(1):
-                sentence = self.connectionSocket.recv(1024)
-                capitalizedSentence = sentence.decode('utf-8').upper()
-                print(capitalizedSentence)
-                self.connectionSocket.send(capitalizedSentence.encode('utf-8'))
-                self.connectionSocket.close()
-                self.serverSocket.close()
-                break;
-
-    def disconnect_fnc(self, btn):
-        pass
-    
-    def send_msg(self,btn):
-        message = self.chat_input.text
-        self.chat_panel.text += 'SENT: '+message+'\n'
-        self.clientSocket.send(message.encode('utf-8'))
-        modifiedSentence = self.clientSocket.recv(1024)
-        self.chat_panel.text += 'RECEIVED: '+modifiedSentence+'\n'
-        print ('From Server:', modifiedSentence)
-        self.chat_input.text=''
-        '''clears text input'''
-
 
     def build(self):
         root = BoxLayout(orientation="horizontal",
@@ -136,7 +97,7 @@ class VpnApp(App):
         connect = Button(text="Connect", color=(0,1,0))
         connect.bind(on_press=self.connect_fnc)
         disconnect = Button(text="Disconnect", color=(1,0,0))
-        disconnect.bind(on_press=self.disconnect_fnc)
+        '''disconnect.bind(on_press=self.disconnect_fnc)'''
         settings_panel.add_widget(connect)
         settings_panel.add_widget(disconnect)
 
@@ -154,10 +115,10 @@ class VpnApp(App):
                                  size=(0, 50),
                                  size_hint=(1, None))
         self.chat_input = TextInput(size_hint=(0.8, 1))
-        self.chat_input.bind(on_text_validate=self.send_msg)
+        '''self.chat_input.bind(on_text_validate=self.send_msg)'''
         self.input_button = Button(size_hint=(0.2, 1),
                               text="Send")
-        self.input_button.bind(on_press=self.send_msg)
+        '''self.input_button.bind(on_press=self.send_msg)'''
         self.input_layout.add_widget(self.chat_input)
         self.input_layout.add_widget(self.input_button)
         self.chat_layout.add_widget(self.chat_panel)
