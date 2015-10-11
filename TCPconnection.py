@@ -68,6 +68,9 @@ class TCPconnection(object):
             self.receive_thread.close()
             self.receive_thread = None
 
+        self.send_queue = None
+        self.receive_queue = None
+
     def __del__(self):
         self.close()
 

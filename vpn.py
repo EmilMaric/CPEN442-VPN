@@ -34,6 +34,7 @@ class VpnApp(App):
     
     def connect_fnc(self, btn):
         #if self.TCPconn != None:
+        self.connection_state = True
         if self.servermode.state == 'down':
             self.TCPconn = TCPconnection.TCPconnection(True, '', int(self.port_textinput.text))
         else:
@@ -48,7 +49,15 @@ class VpnApp(App):
             self.chat_panel.text+="Failed to connect. Please check your parameters and try again \n"
         self.receiver = self.MessageReceiver(self, self.TCPconn)
         self.receiver.start()
-
+        
+    
+    def disconnect_fnc(self, btn):
+        self.receiver.close()
+        self.receiver = None
+        self.TCPconn.close()
+        self.TCPconn = None
+        print ("disconnecting...")
+        self.connection_state = False
 
     def send_msg(self, btn):
         msg = self.chat_input.text
@@ -81,8 +90,6 @@ class VpnApp(App):
         settings_panel.add_widget(self.clientmode)
         settings_panel.add_widget(self.servermode)
 
-        '''ip_address = self.SettingsEntry(text="VPN Server IP Address")
-        settings_panel.add_widget(ip_address)'''
         ip_address = BoxLayout(orientation="vertical", padding=30)
         self.ip_label = Label(text="VPN Server IP Address", size=(300, 50),size_hint=(1, None))
         ip_address.add_widget(self.ip_label)
@@ -90,8 +97,6 @@ class VpnApp(App):
         ip_address.add_widget(self.ip_textinput)
         settings_panel.add_widget(ip_address)
 
-        '''port = self.SettingsEntry(text="VPN Server Port")
-        settings_panel.add_widget(port)'''
         port = BoxLayout(orientation="vertical", padding=30)
         self.port_label = Label(text="VPN Server Port", size=(300, 50),size_hint=(1, None))
         port.add_widget(self.port_label)
@@ -106,7 +111,7 @@ class VpnApp(App):
         connect = Button(text="Connect", color=(0,1,0))
         connect.bind(on_press=self.connect_fnc)
         disconnect = Button(text="Disconnect", color=(1,0,0))
-        '''disconnect.bind(on_press=self.disconnect_fnc)'''
+        disconnect.bind(on_press=self.disconnect_fnc)
         settings_panel.add_widget(connect)
         settings_panel.add_widget(disconnect)
 
@@ -143,7 +148,7 @@ class VpnApp(App):
             self.app = app
 
         def run(self):
-            while (self.keep_alive):
+            while (self.keep_alive and self.app.connection_state):
                 msg = None
                 msg = self.conn.receive()
                 if (msg):
