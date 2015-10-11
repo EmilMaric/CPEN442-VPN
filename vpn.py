@@ -9,6 +9,7 @@ from kivy.graphics import Color, Rectangle
 from kivy.uix.textinput import TextInput
 from kivy.uix.togglebutton import ToggleButton
 from kivy.uix.button import Button
+import threading
 
 import TCPconnection
 
@@ -45,7 +46,15 @@ class VpnApp(App):
                 self.chat_panel.text += "Connected to client "+str(addr)+"\n"
         else:
             self.chat_panel.text+="Failed to connect. Please check your parameters and try again \n"
+        self.receiver = self.MessageReceiver(self, self.TCPconn)
+        self.receiver.start()
 
+
+    def send_msg(self, btn):
+        msg = self.chat_input.text
+        self.TCPconn.send(msg)
+        self.chat_panel.text += "Sent: " + msg + "\n"
+        self.chat_input.text = ""
     
     def SettingsEntry(self,text=None):
         boxlayout = BoxLayout(orientation="vertical", padding=30)
@@ -118,13 +127,31 @@ class VpnApp(App):
         '''self.chat_input.bind(on_text_validate=self.send_msg)'''
         self.input_button = Button(size_hint=(0.2, 1),
                               text="Send")
-        '''self.input_button.bind(on_press=self.send_msg)'''
+        self.input_button.bind(on_press=self.send_msg)
         self.input_layout.add_widget(self.chat_input)
         self.input_layout.add_widget(self.input_button)
         self.chat_layout.add_widget(self.chat_panel)
         self.chat_layout.add_widget(self.input_layout)
         root.add_widget(self.chat_layout)
         return root
+
+    class MessageReceiver(threading.Thread):
+        def __init__(self, app, connection):
+            threading.Thread.__init__(self)
+            self.keep_alive = True
+            self.conn = connection
+            self.app = app
+
+        def run(self):
+            while (self.keep_alive):
+                msg = None
+                msg = self.conn.receive()
+                if (msg):
+                    self.app.chat_panel.text += "Received: " + msg + "\n"
+
+        def close(self):
+            self.keep_alive = False
+
 
 if __name__ == "__main__":
     VpnApp().run()
