@@ -48,7 +48,6 @@ class TCPconnection(object):
             if (self.server):
                 arry = server_connect(sock, self.port)
                 clientsocket = arry[0]
-                return arry[1][0]
             else:
                 try:
                     client_connect(sock, self.host, self.port)
@@ -58,6 +57,8 @@ class TCPconnection(object):
             self.send_thread.start()
             self.receive_thread = Receiver(clientsocket, self.host, self.port, self.receive_queue)
             self.receive_thread.start()
+            if (self.server):
+                return arry[1][0]
         return 1
 
     def close(self):

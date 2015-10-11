@@ -35,6 +35,9 @@ class VpnApp(App):
     def connect_fnc(self, btn):
         #if self.TCPconn != None:
         self.connection_state = True
+        self.connect.disabled = True
+        self.clientmode.disabled = True
+        self.servermode.disabled = True
         if self.servermode.state == 'down':
             self.TCPconn = TCPconnection.TCPconnection(True, '', int(self.port_textinput.text))
         else:
@@ -49,9 +52,7 @@ class VpnApp(App):
             self.chat_panel.text+="Failed to connect. Please check your parameters and try again \n"
         self.receiver = self.MessageReceiver(self, self.TCPconn)
         self.receiver.start()
-        self.connect.disabled = True
-        self.clientmode.disabled = True
-        self.servermode.disabled = True
+
         
     
     def disconnect_fnc(self, btn):
