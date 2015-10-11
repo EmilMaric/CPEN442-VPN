@@ -49,6 +49,9 @@ class VpnApp(App):
             self.chat_panel.text+="Failed to connect. Please check your parameters and try again \n"
         self.receiver = self.MessageReceiver(self, self.TCPconn)
         self.receiver.start()
+        self.connect.disabled = True
+        self.clientmode.disabled = True
+        self.servermode.disabled = True
         
     
     def disconnect_fnc(self, btn):
@@ -58,6 +61,9 @@ class VpnApp(App):
         self.TCPconn = None
         print ("disconnecting...")
         self.connection_state = False
+        self.connect.disabled = False
+        self.clientmode.disabled = False
+        self.servermode.disabled = False
 
     def send_msg(self, btn):
         msg = self.chat_input.text
@@ -108,12 +114,12 @@ class VpnApp(App):
         shared_secret_value = self.SettingsEntry(text="Shared Secret Value")
         settings_panel.add_widget(shared_secret_value)
 
-        connect = Button(text="Connect", color=(0,1,0))
-        connect.bind(on_press=self.connect_fnc)
-        disconnect = Button(text="Disconnect", color=(1,0,0))
-        disconnect.bind(on_press=self.disconnect_fnc)
-        settings_panel.add_widget(connect)
-        settings_panel.add_widget(disconnect)
+        self.connect = Button(text="Connect", color=(0,1,0))
+        self.connect.bind(on_press=self.connect_fnc)
+        self.disconnect = Button(text="Disconnect", color=(1,0,0))
+        self.disconnect.bind(on_press=self.disconnect_fnc)
+        settings_panel.add_widget(self.connect)
+        settings_panel.add_widget(self.disconnect)
 
         empty_widget = Widget()
         settings_panel.add_widget(empty_widget)
