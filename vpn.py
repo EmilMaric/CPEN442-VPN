@@ -9,6 +9,7 @@ from kivy.graphics import Color, Rectangle
 from kivy.uix.textinput import TextInput
 from kivy.uix.togglebutton import ToggleButton
 from kivy.uix.button import Button
+from kivy.uix.behaviors import ToggleButtonBehavior
 
 import TCPconnection
 
@@ -29,6 +30,16 @@ class ColoredBoxLayout(BoxLayout):
         self.rect.size = self.size
 
 
+class ClientServerToggle(ToggleButtonBehavior, Button):
+
+    def __init__(self, **kwargs):
+        super(ClientServerToggle, self).__init__(**kwargs)
+        self.bind(on_press=self.callback)
+
+    def callback(self, instance):
+        print(instance.text + " pressed.")
+
+
 class VpnApp(App):
     
     def connect_fnc(self, btn):
@@ -45,7 +56,6 @@ class VpnApp(App):
                 self.chat_panel.text += "Connected to client "+str(addr)+"\n"
         else:
             self.chat_panel.text+="Failed to connect. Please check your parameters and try again \n"
-
     
     def SettingsEntry(self,text=None):
         boxlayout = BoxLayout(orientation="vertical", padding=30)
@@ -61,14 +71,25 @@ class VpnApp(App):
                          padding=10)
 
         # create settings panel
-        settings_panel = ColoredBoxLayout(orientation="vertical",
-                                        background_color=(0,169,184,0.5),
-                                        size_hint=(0.3, 1),
-                                        padding=10)
+        settings_panel = ColoredBoxLayout(
+                            orientation="vertical",
+                            background_color=(0,169,184,0.5),
+                            size_hint=(0.3, 1),
+                            padding=10
+        )
         root.add_widget(settings_panel)
 
-        self.clientmode = ToggleButton(text='Client', group='mode', state='down')
-        self.servermode = ToggleButton(text='Server', group='mode')
+        self.clientmode = ClientServerToggle(
+                text='Client', 
+                group='mode', 
+                state='down',
+                allow_no_selection=False,
+        )
+        self.servermode = ClientServerToggle(
+                text='Server', 
+                group='mode', 
+                allow_no_selection=False
+        )
         settings_panel.add_widget(self.clientmode)
         settings_panel.add_widget(self.servermode)
 

@@ -62,20 +62,3 @@ def client_connect(sock, host, port):
     except socket_error as serr:
         print('Error: Connection refused... ')
         raise
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
