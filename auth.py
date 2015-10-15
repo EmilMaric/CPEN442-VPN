@@ -1,4 +1,5 @@
 import uuid
+import random
 
 import TCPconnection
 
@@ -11,18 +12,14 @@ class Authentication(object):
     def __init__(self, sharedKey, TPconn):
         self.sharedKey = sharedKey
         self.TPconn = TPconn
-
-#client says ["thisisclient,Ranonce]
-#server says [Rbnonce,E("server",Ranonce;SharedKey)]
-#client says E("client",Rbnonce;SharedKey)
-#Server responds with "Authentication Verified" or "Authentication Rejected"
-#Where Ranonce = (g^a)modg
-#      Rbnonce = (g^b)modg
+        self.sessionKey = 0
 
     def mutualauth(self, machine):
         if(machine == "server"):
             #Wait for client to reach out
             response = TCP.listen() #TODO: OR whatever the listen call is
+
+            #Client response is in the form: ["thisisclient,Ranonce"]
             split_resp = response.split(',')
             filler = split_resp[0]
             Ranonce = split_resp[1]
@@ -32,51 +29,71 @@ class Authentication(object):
                 print('Mutual Authentication failed')
                 return False
 
-            Rbnonce = uuid.uuid4().int
-            serv_resp = "server,"+Ranonce
+            #Server response is in the form : ["Rbnonce,E("server",Ranonce,(g^b)modp)]
+            Rbnonce = uuid.uuid4()
+            b = random.getrandbits(2048)
+            gbmodp = pow(g,b,p)
+            serv_resp = "server," + Ranonce + "," + gbmodp
             encr_serv_resp = AES.encrypt(serv_resp, self.sharedKey)#TODO Run serv_resp through Aes in cbc mode using shared key
             TCPcon.send("" + Rbnonce + "," + encr_serv_resp) #TODO Actually send it
 
-            #Wait for client's encrypted message
+            #Wait for client's encrypted message             
             encr_client_resp = TCP.listen()
             decr_client_resp = AES.derypt(encr_client_resp, self.sharedKey) #TODO: Decrypt encr_client_resp through AES in cbc mode
+
+            #which is in the form: ["E("client",Rbnonce,(g^a)modp)"]
             split_resp = decr_client_resp.split(',')
             filler = split_resp[0]
             received_nonce = split_resp[1]
+            gamodp = split_resp[2]
 
             if(filler!="client" or received_nonce!=Rbnonce):
                 print('Encrypted message from client is not correct. Mutual Authentication Failed')
 		return False
             
+            self.sessionKey = pow(gamodp,b,p)
             #At this point, we can be sure that we are talking with the correct client
+            #and we have a shared session key
             return True;
 
         elif(machine == "client"):
             #Generate a nonce and send this to the server
+            #Initiate contact by sending the following message: ["thisisclient,Ranonce"]
             Ranonce = uuid.uuid4().int
-            TCPcon.send("thisisclient," + Ranonce);
+            TCPcon.send("thisisclient," + Ranonce);#TODO: Change this to however we are sending the message
 
             #Wait for the server response
+            #In the form: ["Rbnonce,E("server",Ranonce,(g^b)modp)"]
             serv_resp = TCPcon.listen()
 
+            #Split the message to get the nonce and the encrypted bit
             split_resp = serv_resp.split(',')
             Rbnonce = split_resp[0]
             encr_server_resp = split_resp[1]
 
             decr_server_resp = AES.decrypt(encr_server_resp, self.sharedKey) #TODO: Decrypt this using Aes in cbc mode
+            
+            #Split the decrypted message to get the filler, client nonce, and (g^b)modp
             split_resp = decr_server_resp.split(',')
-
             filler = split_resp[0]
             nonce = split_resp[1]
+            gbmodp = split_resp[2]
 
             if(nonce!=Ranonce or filler!=server):
                 print('Client is not talking to authorized server. Mutual Authentication failed')
                 return False
 
-            encr_client_resp = AES.encrypt("client,"+Rbnonce, self.sharedKey) #TODO Encrpt this using Aes in cbc mode
+            #Client responds in the form: ["E(client,Rbnonce,(g^a)modp)"]
+            a = random.getrandbits(2048)
+            gamodp = pow(g,b,p)
+            encr_client_resp = AES.encrypt("client,"+Rbnonce + "," + gamodp, self.sharedKey)#TODO Encrpt this using Aes in cbc mode
             TCPconn.send(encr_client_resp)
 
+            #Calculate the session key
+            self.sessionKey = pow(gbmodp,a,p)
+            
             #We are now guaranteed to be talking with our server
+            #We also now have a shared session key
             return True
 
 
