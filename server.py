@@ -1,16 +1,108 @@
-from socket import *
+import socket
+import threading
 
-serverPort = 12000
-serverSocket = socket(AF_INET,SOCK_STREAM)
-serverSocket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-serverSocket.bind(('',serverPort))
-serverSocket.listen(1)
-print ('The server is ready to receive')
-connectionSocket, addr = serverSocket.accept()
+from Queue import Queue
 
-while(1):
-    sentence = connectionSocket.recv(1024)
-    capitalizedSentence = sentence.decode('utf-8').upper()
-    print(capitalizedSentence)
-    connectionSocket.send(capitalizedSentence.encode('utf-8'))
-    '''connectionSocket.close()'''
+
+class VpnServer(object):
+
+    def __init__(self, port):
+        self.port = port
+        self.send_queue = Queue()
+
+    def setup(self):
+        try:
+            self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        except socket.error:
+            return (-1, "Could not create socket")
+
+        try:
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            self.socket.bind(('', self.port))
+            self.socket.listen(1) 
+        except socket.error:
+            return (-1, "Could not bind socket to port " + str(self.port))
+
+        return (0, "VPN server set to listen on port " + str(self.port))
+
+    def send(self, msg):
+        self.send_queue.put(msg)
+
+    def start(self, callback=None):
+        self.listener = Listener(self.socket, callback)
+        self.listener.start()
+
+    def bind(self, client_socket, sender_print_callback=None, receiver_print_callback=None):
+        self.sender = Sender(client_socket, self.send_queue, print_callback=sender_print_callback)
+        self.receiver = Receiver(client_socket, print_callback=receiver_print_callback)
+        self.sender.start()
+        self.receiver.start()
+
+    def close(self):
+        self.listener.close()
+
+
+class Listener(threading.Thread):
+
+    def __init__(self, socket, callback):
+        threading.Thread.__init__(self)
+        self.socket = socket
+        self.keep_alive = True
+        self.callback=callback
+
+    def run(self):
+        self.socket.setblocking(0)
+        while (self.keep_alive):
+            try:
+                client_socket, addr = self.socket.accept()
+                break
+            except socket.error:
+                pass
+        if not self.keep_alive:
+            self.socket.close()
+        if self.callback:
+            self.callback(client_socket, addr[0], addr[1])
+
+    def close(self):
+        self.keep_alive = False
+
+
+class Sender(threading.Thread):
+
+    def __init__(self, socket, queue, print_callback=None):
+        threading.Thread.__init__(self)
+        self.socket = socket
+        self.keep_alive = True
+        self.print_callback = print_callback
+        self.queue = queue
+
+    def run(self):
+        while (self.keep_alive):
+            if not self.queue.empty():
+                msg = self.queue.get()
+                self.socket.send(msg)
+                self.print_callback(msg)
+        self.socket.close()
+
+    def close(self):
+        self.keep_alive = False
+
+
+class Receiver(threading.Thread):
+
+    def __init__(self, socket, print_callback=None):
+        threading.Thread.__init__(self)
+        self.socket = socket
+        self.socket.setblocking(1)
+        self.print_callback = print_callback
+        self.keep_alive = True
+
+    def run(self):
+        while (self.keep_alive):
+            msg = self.socket.recv(1024)
+            if (msg):
+                self.print_callback(msg)
+        self.socket.close()
+
+    def close(self):
+        self.keep_alive = False
