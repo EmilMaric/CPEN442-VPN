@@ -28,6 +28,12 @@ class Authentication(object):
         plaintext = cipher.decrypt(message[AES.block_size + 1:])
         return plaintext
 
+    def getMessage(self):
+        return TCP.listen()
+
+    def send(self, message):
+        TCPcon.send(message)
+
     def mutualauth(self, machine):
         if (machine == "server"):
             #Wait for client to reach out
@@ -50,10 +56,10 @@ class Authentication(object):
             serv_resp = "server," + Ranonce + "," + gbmodp
             encr_serv_resp = encryptmessage(serv_resp,
                                             self.sharedKey)  #TODO Run serv_resp through Aes in cbc mode using shared key
-            TCPcon.send("" + Rbnonce + "," + encr_serv_resp)  #TODO Actually send it
+            send("" + Rbnonce + "," + encr_serv_resp)  #TODO Actually send it
 
             #Wait for client's encrypted message             
-            encr_client_resp = TCP.listen()
+            encr_client_resp = getMessage()
             decr_client_resp = decryptmessage(encr_client_resp,
                                               self.sharedKey)  #TODO: Decrypt encr_client_resp through AES in cbc mode
 
@@ -76,11 +82,11 @@ class Authentication(object):
             #Generate a nonce and send this to the server
             #Initiate contact by sending the following message: ["thisisclient,Ranonce"]
             Ranonce = uuid.uuid4().int
-            TCPcon.send("thisisclient," + Ranonce);  #TODO: Change this to however we are sending the message
+            send("thisisclient," + Ranonce);  #TODO: Change this to however we are sending the message
 
             #Wait for the server response
             #In the form: ["Rbnonce,E("server",Ranonce,(g^b)modp)"]
-            serv_resp = TCPcon.listen()
+            serv_resp = getMessage()
 
             #Split the message to get the nonce and the encrypted bit
             split_resp = serv_resp.split(',')
@@ -105,7 +111,7 @@ class Authentication(object):
             gamodp = pow(g, b, p)
             encr_client_resp = encryptmessage("client," + Rbnonce + "," + gamodp,
                                               self.sharedKey)  #TODO Encrpt this using Aes in cbc mode
-            TCPconn.send(encr_client_resp)
+            send(encr_client_resp)
 
             #Calculate the session key
             self.sessionKey = pow(gbmodp, a, p)
