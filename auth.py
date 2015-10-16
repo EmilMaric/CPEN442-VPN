@@ -1,5 +1,7 @@
 import uuid
 import random
+from Crypto import Random
+from Crypto.Cipher import AES
 
 import TCPconnection
 
@@ -13,6 +15,18 @@ class Authentication(object):
         self.sharedKey = sharedKey
         self.TPconn = TPconn
         self.sessionKey = 0
+
+    def encryptmessage(self, message, sessionKey):
+        iv = Random.new().read(AES.block_size)
+        cipher = AES.new(sessionKey, AES.MODE_CBC, iv)
+        ciphertext = iv + cipher.encrypt(message)
+        return ciphertext
+
+    def decryptmesssage(self, message, sessionKey):
+        iv = message[0:AES.block_size]
+        cipher = AES.new(sessionKey, AES.MODE_CBC, iv);
+        plaintext = cipher.decrypt(message[AES.block_size + 1:])
+        return plaintext
 
     def mutualauth(self, machine):
         if(machine == "server"):
@@ -34,12 +48,12 @@ class Authentication(object):
             b = random.getrandbits(2048)
             gbmodp = pow(g,b,p)
             serv_resp = "server," + Ranonce + "," + gbmodp
-            encr_serv_resp = AES.encrypt(serv_resp, self.sharedKey)#TODO Run serv_resp through Aes in cbc mode using shared key
+            encr_serv_resp = encryptmessage(serv_resp, self.sharedKey) #TODO Run serv_resp through Aes in cbc mode using shared key
             TCPcon.send("" + Rbnonce + "," + encr_serv_resp) #TODO Actually send it
 
             #Wait for client's encrypted message             
             encr_client_resp = TCP.listen()
-            decr_client_resp = AES.derypt(encr_client_resp, self.sharedKey) #TODO: Decrypt encr_client_resp through AES in cbc mode
+            decr_client_resp = decryptmessage(encr_client_resp, self.sharedKey) #TODO: Decrypt encr_client_resp through AES in cbc mode
 
             #which is in the form: ["E("client",Rbnonce,(g^a)modp)"]
             split_resp = decr_client_resp.split(',')
@@ -71,7 +85,7 @@ class Authentication(object):
             Rbnonce = split_resp[0]
             encr_server_resp = split_resp[1]
 
-            decr_server_resp = AES.decrypt(encr_server_resp, self.sharedKey) #TODO: Decrypt this using Aes in cbc mode
+            decr_server_resp = decryptmessage(encr_server_resp, self.sharedKey) #TODO: Decrypt this using Aes in cbc mode
             
             #Split the decrypted message to get the filler, client nonce, and (g^b)modp
             split_resp = decr_server_resp.split(',')
@@ -86,7 +100,7 @@ class Authentication(object):
             #Client responds in the form: ["E(client,Rbnonce,(g^a)modp)"]
             a = random.getrandbits(2048)
             gamodp = pow(g,b,p)
-            encr_client_resp = AES.encrypt("client,"+Rbnonce + "," + gamodp, self.sharedKey)#TODO Encrpt this using Aes in cbc mode
+            encr_client_resp = encryptmessage("client,"+Rbnonce + "," + gamodp, self.sharedKey)#TODO Encrpt this using Aes in cbc mode
             TCPconn.send(encr_client_resp)
 
             #Calculate the session key
@@ -95,6 +109,4 @@ class Authentication(object):
             #We are now guaranteed to be talking with our server
             #We also now have a shared session key
             return True
-
-
 
