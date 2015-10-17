@@ -10,6 +10,7 @@ class VpnClient(object):
         self.ip_addr = ip_addr
         self.port = port
         self.send_queue = Queue()
+        self.receive_queue = Queue()
 
     def connect(self):
         try:
@@ -30,12 +31,24 @@ class VpnClient(object):
 
     def bind(self, sender_print_callback=None, receiver_print_callback=None):
         self.sender = Sender(self.socket, self.send_queue, print_callback=sender_print_callback)
-        self.receiver = Receiver(self.socket, print_callback=receiver_print_callback)
+        self.receiver = Receiver(self.socket, self.receive_queue, print_callback=receiver_print_callback)
         self.sender.start()
         self.receiver.start()
 
     def close(self):
         self.socket.close()
+
+    def get_receive(self):
+        if (not self.receive_queue.empty()):
+            return self.receive_queue.get()
+        else:
+            return None
+                
+    def receive(self):
+        msg = None
+        while (msg == None):
+            msg = self.get_receive()
+        return msg
 
 
 class Sender(threading.Thread):
@@ -61,16 +74,18 @@ class Sender(threading.Thread):
 
 class Receiver(threading.Thread):
 
-    def __init__(self, socket, print_callback=None):
+    def __init__(self, socket, queue, print_callback=None):
         threading.Thread.__init__(self)
         self.socket = socket
         self.print_callback = print_callback
+        self.queue = queue
         self.keep_alive = True
 
     def run(self):
         while (self.keep_alive):
             msg = self.socket.recv(1024)
             if (msg):
+                self.queue.put(msg)
                 self.print_callback(msg)
         self.socket.close()
 
