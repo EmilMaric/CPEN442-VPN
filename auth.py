@@ -2,6 +2,7 @@ import uuid
 import random
 from Crypto import Random
 from Crypto.Cipher import AES
+import sys
 
 import TCPconnection
 
@@ -14,20 +15,21 @@ class Authentication(object):
     p = shared_prime
 
     def __init__(self, shared_key, TCPconn):
-        self.shared_key = shared_key
+        print "Shared Key: " + str(shared_key) + "Size: " + str(sys.getsizeof(shared_key))
+        self.shared_key = b'1234567890123456'
         self.TCPconn = TCPconn
         self.session_key = "SessionKey"
 
     def encrypt_message(self, message, session_key):
         iv = Random.new().read(AES.block_size)
-        cipher = AES.new(str(session_key)[0:7], AES.MODE_CBC, iv)
+        cipher = AES.new(str(session_key), AES.MODE_CBC, iv)
         ciphertext = iv + cipher.encrypt(message)
         return ciphertext
 
     def decrypt_message(self, message, session_key):
         iv = message[0:16]
-        cipher = AES.new(str(session_key)[0:7], AES.MODE_CBC, iv);
-        plaintext = cipher.decrypt(message[17:])
+        cipher = AES.new(str(session_key), AES.MODE_CBC, iv);
+        plaintext = cipher.decrypt(message[16:])
         return plaintext
 
     def get_message(self):
