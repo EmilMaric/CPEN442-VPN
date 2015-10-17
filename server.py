@@ -2,14 +2,16 @@ import socket
 import threading
 
 from Queue import Queue
-
+from auth import Authentication
 
 class VpnServer(object):
 
-    def __init__(self, port):
+    def __init__(self, port, shared_key):
         self.port = port
         self.send_queue = Queue()
         self.receive_queue = Queue()
+        self.authenticated = False
+        self.shared_key = shared_key
 
     def setup(self):
         try:
@@ -30,7 +32,7 @@ class VpnServer(object):
         self.send_queue.put(msg)
 
     def start(self, callback=None):
-        self.listener = Listener(self.socket, callback)
+        self.listener = Listener(self.socket, callback, self.shared_key)
         self.listener.start()
 
     def bind(self, client_socket, sender_print_callback=None, receiver_print_callback=None):
@@ -57,24 +59,33 @@ class VpnServer(object):
 
 class Listener(threading.Thread):
 
-    def __init__(self, socket, callback):
+    def __init__(self, socket, callback, shared_key):
         threading.Thread.__init__(self)
         self.socket = socket
         self.keep_alive = True
         self.callback=callback
+        self.shared_key = shared_key
 
     def run(self):
         self.socket.setblocking(0)
-        while (self.keep_alive):
+        authenticated = False
+
+        while (self.keep_alive and authenticated == False):
             try:
                 client_socket, addr = self.socket.accept()
-                break
+
+                auth = Authentication(self.shared_key, client_socket)
+                if (auth.mutualauth("server")):
+                    authenticated = True
+                else:
+                    print "unable to authenticate"
             except socket.error:
+                print "socket errror....."
                 pass
         if not self.keep_alive:
             self.socket.close()
         if self.callback:
-            self.callback(client_socket, addr[0], addr[1])
+            self.callback(client_socket, addr[0], addr[1]) # addr[0] = ip, addr[1] = port
 
     def close(self):
         self.keep_alive = False
