@@ -22,22 +22,22 @@ class Authentication(object):
         ciphertext = iv + cipher.encrypt(message)
         return ciphertext
 
-    def decryptmesssage(self, message, sessionKey):
+    def decryptmessage(self, message, sessionKey):
         iv = message[0:AES.block_size]
         cipher = AES.new(sessionKey, AES.MODE_CBC, iv);
         plaintext = cipher.decrypt(message[AES.block_size + 1:])
         return plaintext
 
-    def getMessage(self):
+    def getmessage(self):
         return TCP.listen()
 
     def send(self, message):
-        TCPcon.send(message)
+        TCPconn.send(message)
 
     def mutualauth(self, machine):
         if (machine == "server"):
             #Wait for client to reach out
-            response = TCP.listen()  #TODO: OR whatever the listen call is
+            response = getmessage()  #TODO: OR whatever the listen call is
 
             #Client response is in the form: ["thisisclient,Ranonce"]
             split_resp = response.split(',')
@@ -59,7 +59,7 @@ class Authentication(object):
             send("" + Rbnonce + "," + encr_serv_resp)  #TODO Actually send it
 
             #Wait for client's encrypted message             
-            encr_client_resp = getMessage()
+            encr_client_resp = getmessage()
             decr_client_resp = decryptmessage(encr_client_resp,
                                               self.sharedKey)  #TODO: Decrypt encr_client_resp through AES in cbc mode
 
