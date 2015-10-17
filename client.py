@@ -2,14 +2,15 @@ import socket
 import threading
 
 from Queue import Queue
-
+from auth import Authentication
 
 class VpnClient(object):
 
-    def __init__(self, ip_addr, port):
+    def __init__(self, ip_addr, port, shared_key):
         self.ip_addr = ip_addr
         self.port = port
         self.send_queue = Queue()
+        self.shared_key = shared_key
 
     def connect(self):
         try:
@@ -20,10 +21,15 @@ class VpnClient(object):
 
         try:
             self.socket.connect((self.ip_addr, self.port))
+            auth = Authentication(self.shared_key, self.socket)
+            if (auth.mutualauth("client")):
+                return (0, "Connected to (%s, %i)" % (self.ip_addr, self.port))
+                authenticated = True
         except socket.error:
             return (-1, "Could not connect to (%s, %i)" % (self.ip_addr, self.port))
 
-        return (0, "Connected to (%s, %i)" % (self.ip_addr, self.port))
+        return (-1, "Could not connect to (%s, %i)" % (self.ip_addr, self.port))
+
 
     def send(self, msg):
         self.send_queue.put(msg)

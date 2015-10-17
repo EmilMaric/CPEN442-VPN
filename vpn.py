@@ -100,10 +100,21 @@ class VpnApp(App):
 
         # get inserted port number
         port = 0
+
         for child in self.port.children:
             if isinstance(child, TextInput):
                 try:
                     port = int(child.text)
+                except ValueError:
+                    # TODO: print error to chat panel
+                    self.chat_panel.write_info("Invalid port: " + child.text)
+                    return
+
+        shared_key = 0
+        for child in self.shared_value.children:
+            if isinstance(child, TextInput):
+                try:
+                    shared_key = int(child.text)
                 except ValueError:
                     # TODO: print error to chat panel
                     self.chat_panel.write_info("Invalid port: " + child.text)
@@ -124,7 +135,7 @@ class VpnApp(App):
 
         if (self.servermode.state == 'down'):
             # vpn is in 'server' mode
-            self.server = VpnServer(port)
+            self.server = VpnServer(port, shared_key)
             error, message = self.server.setup()
             #TODO: Write to chat panel
             
@@ -143,7 +154,7 @@ class VpnApp(App):
                 self.server.start(callback=self.client_connected_callback)
         else:
             # vpn is in 'client' mode 
-            self.client = VpnClient(ip_address, port)
+            self.client = VpnClient(ip_address, port, shared_key)
             error, message = self.client.connect()
 
             if (error != 0):
