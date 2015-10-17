@@ -22,10 +22,11 @@ class VpnClient(object):
 
         try:
             self.socket.connect((self.ip_addr, self.port))
-            auth = Authentication(self.shared_key, self.socket)
+            auth = Authentication(self.shared_key, self)
+            self.bind()
             if (auth.mutualauth("client")):
-                return (0, "Connected to (%s, %i)" % (self.ip_addr, self.port))
                 authenticated = True
+                return (0, "Connected to (%s, %i)" % (self.ip_addr, self.port))
         except socket.error:
             return (-1, "Could not connect to (%s, %i)" % (self.ip_addr, self.port))
 
@@ -71,7 +72,8 @@ class Sender(threading.Thread):
             if not self.queue.empty():
                 msg = self.queue.get()
                 self.socket.send(msg)
-                self.print_callback(msg)
+                if self.print_callback is not None:
+                    self.print_callback(msg)
         self.socket.close()
 
     def close(self):

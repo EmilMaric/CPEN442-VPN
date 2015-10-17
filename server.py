@@ -32,7 +32,7 @@ class VpnServer(object):
         self.send_queue.put(msg)
 
     def start(self, callback=None):
-        self.listener = Listener(self.socket, callback, self.shared_key)
+        self.listener = Listener(self.socket, callback, self.shared_key, self)
         self.listener.start()
 
     def bind(self, client_socket, sender_print_callback=None, receiver_print_callback=None):
@@ -59,12 +59,13 @@ class VpnServer(object):
 
 class Listener(threading.Thread):
 
-    def __init__(self, socket, callback, shared_key):
+    def __init__(self, socket, callback, shared_key, server):
         threading.Thread.__init__(self)
         self.socket = socket
         self.keep_alive = True
         self.callback=callback
         self.shared_key = shared_key
+        self.server = server
 
     def run(self):
         self.socket.setblocking(0)
@@ -74,7 +75,8 @@ class Listener(threading.Thread):
             try:
                 client_socket, addr = self.socket.accept()
 
-                auth = Authentication(self.shared_key, client_socket)
+                auth = Authentication(self.shared_key, self.server)
+                self.server.bind(client_socket)
                 if (auth.mutualauth("server")):
                     authenticated = True
                 else:
@@ -105,7 +107,8 @@ class Sender(threading.Thread):
             if not self.queue.empty():
                 msg = self.queue.get()
                 self.socket.send(msg)
-                self.print_callback(msg)
+                if self.print_callback is not None:
+                    self.print_callback(msg)
         self.socket.close()
 
     def close(self):
@@ -120,13 +123,15 @@ class Receiver(threading.Thread):
         self.socket.setblocking(1)
         self.print_callback = print_callback
         self.keep_alive = True
+        self.queue = queue
 
     def run(self):
         while (self.keep_alive):
             msg = self.socket.recv(1024)
             if (msg):
                 self.queue.put(msg)
-                self.print_callback(msg)
+                if self.print_callback is not None:
+                    self.print_callback(msg)
         self.socket.close()
 
     def close(self):

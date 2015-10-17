@@ -22,18 +22,21 @@ class Authentication(object):
 
     def encrypt_message(self, message, session_key):
         iv = Random.new().read(AES.block_size)
+        msg = str(message) + (((16 - len(message)) % 16) * ' ')
         cipher = AES.new(str(session_key), AES.MODE_CBC, iv)
-        ciphertext = iv + cipher.encrypt(message)
+        print "msg: " + msg + " Size: " + str(sys.getsizeof(msg))
+        ciphertext = iv + cipher.encrypt(msg)
         return ciphertext
 
     def decrypt_message(self, message, session_key):
         iv = message[0:16]
+        print "iv: " + iv + " Size " + str(sys.getsizeof(iv))
         cipher = AES.new(str(session_key), AES.MODE_CBC, iv);
         plaintext = cipher.decrypt(message[16:])
-        return plaintext
+        return plaintext.strip()
 
     def get_message(self):
-        return self.TCPconn.recv(1024)
+        return self.TCPconn.receive()
 
     def send(self, message):
         self.TCPconn.send(message)
@@ -72,7 +75,7 @@ class Authentication(object):
             encr_client_resp = self.get_message()
             print "Encr Client Resp: " + encr_client_resp
 
-            decr_client_resp = decrypt_message(encr_client_resp,
+            decr_client_resp = self.decrypt_message(encr_client_resp,
                                               self.shared_key)  #TODO: Decrypt encr_client_resp through AES in cbc mode
 
             print "Decr Client Resp: " + decr_client_resp
@@ -106,7 +109,7 @@ class Authentication(object):
 
             #Split the message to get the nonce and the encrypted bit
             split_resp = serv_resp.split(',')
-            Rbnonce = int(split_resp[0])
+            Rbnonce = split_resp[0]
             encr_server_resp = split_resp[1]
 
             decr_server_resp = self.decrypt_message(encr_server_resp,
