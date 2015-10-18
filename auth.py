@@ -52,7 +52,7 @@ class Authentication(object):
 
             print(response)
             #Client response is in the form: ["thisisclient,Ranonce"]
-            split_resp = response.split(',')
+            split_resp = response.split(',',1)
             filler = split_resp[0]
             Ranonce = int(split_resp[1])
 
@@ -113,7 +113,7 @@ class Authentication(object):
 
             #Split the message to get the nonce and the encrypted bit
             #decr_server_resp = self.decrypt_message(serv_resp, self.shared_key)
-            split_resp = serv_resp.split(',')
+            split_resp = serv_resp.split(',',1)
             Rbnonce = split_resp[0]
             encr_server_resp = split_resp[1]
 
