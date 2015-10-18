@@ -5,6 +5,7 @@ from Queue import Queue
 from auth import Authentication
 
 class VpnClient(object):
+    client_str = "CLIENT"
 
     def __init__(self, ip_addr, port, shared_key):
         self.ip_addr = ip_addr
@@ -12,6 +13,7 @@ class VpnClient(object):
         self.send_queue = Queue()
         self.receive_queue = Queue()
         self.shared_key = shared_key
+
 
     def connect(self):
         try:
@@ -22,9 +24,9 @@ class VpnClient(object):
 
         try:
             self.socket.connect((self.ip_addr, self.port))
-            auth = Authentication(self.shared_key, self)
+            auth = Authentication(self.shared_key, self, True, self.client_str)
             self.bind()
-            if (auth.mutualauth("client")):
+            if (auth.mutualauth()):
                 authenticated = True
                 return (0, "Connected to (%s, %i)" % (self.ip_addr, self.port))
         except socket.error:
@@ -34,7 +36,8 @@ class VpnClient(object):
 
 
     def send(self, msg):
-        self.send_queue.put(msg)
+        length = len(msg)
+        self.send_queue.put(str(length) + ":" + msg)
 
     def bind(self, sender_print_callback=None, receiver_print_callback=None):
         self.sender = Sender(self.socket, self.send_queue, print_callback=sender_print_callback)
@@ -52,9 +55,25 @@ class VpnClient(object):
             return None
                 
     def receive(self):
-        msg = None
-        while (msg == None):
-            msg = self.get_receive()
+        msg = ""
+        remaining_size = 0
+        got_size = False
+
+        while got_size is False or remaining_size > 0:
+            recv = self.get_receive()
+            if recv is None:
+                continue
+
+            msg += recv
+
+            if got_size is False and ':' in msg:
+                size, ignore, msg = msg.partition(':')
+                remaining_size = int(size)
+                remaining_size -= len(msg)
+                got_size = True
+            elif got_size is True:
+                remaining_size -= len(recv)
+
         return msg
 
 
@@ -73,7 +92,8 @@ class Sender(threading.Thread):
                 msg = self.queue.get()
                 self.socket.send(msg)
                 if self.print_callback is not None:
-                    self.print_callback(msg)
+                    print ' '
+                    #self.print_callback(msg)
         self.socket.close()
 
     def close(self):
@@ -91,10 +111,11 @@ class Receiver(threading.Thread):
 
     def run(self):
         while (self.keep_alive):
-            msg = self.socket.recv(1024)
+            msg = self.socket.recv(8192)
             if (msg):
                 self.queue.put(msg)
-                self.print_callback(msg)
+                if self.print_callback is not None:
+                    self.print_callback(msg)
         self.socket.close()
 
     def close(self):
