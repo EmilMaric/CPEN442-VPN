@@ -25,6 +25,23 @@ class Authentication(object):
         self.debug = debug
         self.machine = machine
 
+    def int_to_bytes(self, value):
+        b = bytearray()
+
+        while value > 0:
+            b.append(value % 256)
+            value = value // 256
+
+        b.reverse()
+        return b
+
+    def bytes_to_int(self, bytes):
+        result = 0;
+
+        for b in bytes:
+            result = result * 256 + int(b)
+        return result
+
     def encrypt_message(self, message, session_key):
         iv = Random.new().read(AES.block_size)
         if self.debug:
@@ -119,7 +136,7 @@ class Authentication(object):
                 print('Encrypted message from client is not correct. Mutual Authentication Failed')
                 return False
 
-            self.session_key = pow(gamodp, b, self.p)
+            self.session_key = self.bytes_to_int(self.int_to_bytes(pow(gamodp, b, self.p))[:16])
             if self.debug:
                 Logger.log("Session Key: " + str(hex(self.session_key)), self.machine)
 
@@ -184,7 +201,8 @@ class Authentication(object):
             self.send(encr_client_resp)
 
             #Calculate the session key
-            self.session_key = pow(gbmodp, a, self.p)
+            self.session_key = self.bytes_to_int(self.int_to_bytes(pow(gbmodp, a, self.p))[:16])
+
             if self.debug:
                 Logger.log("Session Key: " + str(hex(self.session_key)), self.machine)
 
