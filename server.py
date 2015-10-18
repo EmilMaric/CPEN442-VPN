@@ -29,7 +29,8 @@ class VpnServer(object):
         return (0, "VPN server set to listen on port " + str(self.port))
 
     def send(self, msg):
-        self.send_queue.put(msg)
+        length = len(msg)
+        self.send_queue.put(str(length) + ":" + msg)
 
     def start(self, callback=None):
         self.listener = Listener(self.socket, callback, self.shared_key, self)
@@ -51,13 +52,30 @@ class VpnServer(object):
             return None
 
     def receive(self):
-        msg = None
-        while (msg == None):
-            msg = self.get_receive()
+        msg = ""
+        remaining_size = 0
+        got_size = False
+
+        while got_size is False or remaining_size > 0:
+            recv = self.get_receive()
+            if recv is None:
+                continue
+
+            msg += recv
+
+            if got_size is False and ':' in msg:
+                size, ignore, msg = msg.partition(':')
+                remaining_size = int(size)
+                remaining_size -= len(msg)
+                got_size = True
+            elif got_size is True:
+                remaining_size -= len(recv)
+
         return msg
 
 
 class Listener(threading.Thread):
+    server_str = "SERVER" #TODO find better place for this
 
     def __init__(self, socket, callback, shared_key, server):
         threading.Thread.__init__(self)
@@ -75,12 +93,12 @@ class Listener(threading.Thread):
             try:
                 client_socket, addr = self.socket.accept()
 
-                auth = Authentication(self.shared_key, self.server)
+                auth = Authentication(self.shared_key, self.server, True, self.server_str)
                 self.server.bind(client_socket)
-                if (auth.mutualauth("server")):
+                if (auth.mutualauth()):
                     authenticated = True
                 else:
-                    print "unable to authenticate"
+                    print "Unable to authenticate"
             except socket.error:
                 pass
         if not self.keep_alive:
@@ -126,7 +144,7 @@ class Receiver(threading.Thread):
 
     def run(self):
         while (self.keep_alive):
-            msg = self.socket.recv(1024)
+            msg = self.socket.recv(8192)
             if (msg):
                 self.queue.put(msg)
                 if self.print_callback is not None:
