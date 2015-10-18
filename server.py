@@ -82,7 +82,6 @@ class Listener(threading.Thread):
                 else:
                     print "unable to authenticate"
             except socket.error:
-                print "socket errror....."
                 pass
         if not self.keep_alive:
             self.socket.close()

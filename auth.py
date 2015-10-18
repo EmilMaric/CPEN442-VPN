@@ -22,16 +22,19 @@ class Authentication(object):
 
     def encrypt_message(self, message, session_key):
         iv = Random.new().read(AES.block_size)
+        print "sending IV: " + str(iv) + " Size " + str(sys.getsizeof(iv))
         msg = str(message) + (((16 - len(message)) % 16) * ' ')
         cipher = AES.new(str(session_key), AES.MODE_CBC, iv)
         print "msg: " + msg + " Size: " + str(sys.getsizeof(msg))
         ciphertext = iv + cipher.encrypt(msg)
+        print "ctext: " + str(len(ciphertext))
         return ciphertext
 
     def decrypt_message(self, message, session_key):
         iv = message[0:16]
-        print "iv: " + iv + " Size " + str(sys.getsizeof(iv))
+        print "recevied iv: " + iv + " Size " + str(sys.getsizeof(iv))
         cipher = AES.new(str(session_key), AES.MODE_CBC, iv);
+        print "Len msg: " + str(len(message))
         plaintext = cipher.decrypt(message[16:])
         return plaintext.strip()
 
@@ -59,7 +62,7 @@ class Authentication(object):
                 return False
 
             #Server response is in the form : ["Rbnonce,E("server",Ranonce,(g^b)modp)]
-            Rbnonce = uuid.uuid4()
+            Rbnonce = uuid.uuid4().int
             b = random.getrandbits(2048)
             print "Rbnonce: " + str(Rbnonce)
             print "B: " + str(b)
@@ -69,7 +72,8 @@ class Authentication(object):
             print "Serv Response: " + serv_resp
             encr_serv_resp = self.encrypt_message(serv_resp,
                                             self.shared_key)  #TODO Run serv_resp through Aes in cbc mode using shared key
-            self.send("" + str(Rbnonce) + "," + encr_serv_resp)  #TODO Actually send it
+            print "Ecnr Serv Response length: " + str(len(encr_serv_resp[16:]))
+            self.send(str(Rbnonce) + "," + encr_serv_resp)  #TODO Actually send it
 
             #Wait for client's encrypted message             
             encr_client_resp = self.get_message()
@@ -108,6 +112,7 @@ class Authentication(object):
             print "Serv Resp: " + str(serv_resp)
 
             #Split the message to get the nonce and the encrypted bit
+            #decr_server_resp = self.decrypt_message(serv_resp, self.shared_key)
             split_resp = serv_resp.split(',')
             Rbnonce = split_resp[0]
             encr_server_resp = split_resp[1]
