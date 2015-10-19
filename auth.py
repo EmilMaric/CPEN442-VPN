@@ -19,12 +19,19 @@ class Authentication(object):
 
     def __init__(self, shared_key, conn, debug=False, is_server=False):
         #print "Shared Key: " + str(shared_key) + "Size: " + str(sys.getsizeof(shared_key))
+        #We need to generate two keys - one for encrypting
+        #the message and one for sending a MAC message
         sha256_hash = SHA256.new()
         sha256_hash.update(str(shared_key))
         self.shared_key = sha256_hash.digest()
-        self.conn = conn
-        self.session_key = 0
-        self.debug = debug
+
+        sha256_hash = SHA256.new()
+        sha256_hash.update(str(self.shared_key))
+        self.mac_key = sha256_hash.digest()
+        
+        print "Shared Key: " + self.shared_key
+        print "Mac Key: " + self.mac_key
+
         self.is_server = is_server
 
     def int_to_bytes(self, value):
