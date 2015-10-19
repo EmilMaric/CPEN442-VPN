@@ -81,8 +81,6 @@ class Authentication(object):
             # Wait for client to reach out
             response = self.get_message()
 
-            print('Hello World')
-
             #Client response is in the form: ["thisisclient,Ranonce"]
             try:
                 split_resp = response.split(',',1)
