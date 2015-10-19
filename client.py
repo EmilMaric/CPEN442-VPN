@@ -27,6 +27,7 @@ class VpnClient(object):
             auth = Authentication(self.shared_key, self, True, self.client_str)
             self.bind()
             if (auth.mutualauth()):
+                print "Server Authenticated!"
                 authenticated = True
                 return (0, "Connected to (%s, %i)" % (self.ip_addr, self.port))
         except socket.error:
