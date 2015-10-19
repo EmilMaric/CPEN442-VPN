@@ -94,7 +94,7 @@ class Listener(threading.Thread):
                 client_socket, addr = self.socket.accept()
 
                 auth = Authentication(self.shared_key, self.server, True, self.server_str)
-                self.server.bind(client_socket)
+                self.server.bind(client_socket) # Added because we need the send/recv threads running for authentication
                 if (auth.mutualauth()):
                     print "Client Authenticated!"
                     authenticated = True
