@@ -54,25 +54,3 @@ class VpnClient(object):
             return self.receive_queue.get()
         else:
             return None
-                
-#    def receive(self):
-#        msg = ""
-#        remaining_size = 0
-#        got_size = False
-#
-#        while got_size is False or remaining_size > 0:
-#            recv = self.get_receive()
-#            if recv is None:
-#                continue
-#
-#            msg += recv
-#
-#            if got_size is False and ':' in msg:
-#                size, ignore, msg = msg.partition(':')
-#                remaining_size = int(size)
-#                remaining_size -= len(msg)
-#                got_size = True
-#            elif got_size is True:
-#                remaining_size -= len(recv)
-#
-#        return msg
