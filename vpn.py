@@ -110,11 +110,11 @@ class VpnApp(App):
                     self.chat_panel.write_info("Invalid port: " + child.text)
                     return
 
-        shared_key = 0
+        shared_key = ""
         for child in self.shared_value.children:
             if isinstance(child, TextInput):
                 try:
-                    shared_key = int(child.text)
+                    shared_key = str(child.text)
                 except ValueError:
                     # TODO: print error to chat panel
                     self.chat_panel.write_info("Invalid port: " + child.text)

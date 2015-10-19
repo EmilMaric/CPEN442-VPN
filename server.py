@@ -96,6 +96,7 @@ class Listener(threading.Thread):
                 auth = Authentication(self.shared_key, self.server, True, self.server_str)
                 self.server.bind(client_socket)
                 if (auth.mutualauth()):
+                    print "Client Authenticated!"
                     authenticated = True
                 else:
                     print "Unable to authenticate"

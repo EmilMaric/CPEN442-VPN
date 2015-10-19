@@ -3,6 +3,7 @@ import random
 
 from Crypto import Random
 from Crypto.Cipher import AES
+from Crypto.Hash import SHA256
 
 from logger import Logger
 
@@ -19,7 +20,9 @@ class Authentication(object):
 
     def __init__(self, shared_key, TCPconn, debug, machine):
         #print "Shared Key: " + str(shared_key) + "Size: " + str(sys.getsizeof(shared_key))
-        self.shared_key = b'1234567890123456'
+        sha256_hash = SHA256.new()
+        sha256_hash.update(str(shared_key))
+        self.shared_key = sha256_hash.digest()
         self.TCPconn = TCPconn
         self.session_key = 0
         self.debug = debug
@@ -74,12 +77,14 @@ class Authentication(object):
             #Wait for client to reach out
             response = self.get_message()
 
-
-
             #Client response is in the form: ["thisisclient,Ranonce"]
-            split_resp = response.split(',',1)
-            filler = split_resp[0]
-            Ranonce = int(split_resp[1])
+            try:
+                split_resp = response.split(',',1)
+                filler = split_resp[0]
+                Ranonce = int(split_resp[1])
+            except:
+                Logger.log("Server reponse in unexpected format", self.machine)
+                return False
 
             if self.debug:
                 Logger.log("Client Response ([thisisclient, Ranonce])", self.machine)
@@ -120,10 +125,14 @@ class Authentication(object):
                                               self.shared_key)
 
             #which is in the form: ["E("client",Rbnonce,(g^a)modp)"]
-            split_resp = decr_client_resp.split(',')
-            filler = split_resp[0]
-            received_nonce = int(split_resp[1])
-            gamodp = int(split_resp[2])
+            try:
+                split_resp = decr_client_resp.split(',')
+                filler = split_resp[0]
+                received_nonce = int(split_resp[1])
+                gamodp = int(split_resp[2])
+            except:
+                Logger.log("Server reponse in unexpected format", self.machine)
+                return False
 
             if self.debug:
                 Logger.log("Client Response ([E(client , Rbnonce, (g^a)modp)])", self.machine)
@@ -161,18 +170,26 @@ class Authentication(object):
 
             #Split the message to get the nonce and the encrypted bit
             #decr_server_resp = self.decrypt_message(serv_resp, self.shared_key)
-            split_resp = serv_resp.split(',',1)
-            Rbnonce = int(split_resp[0])
-            encr_server_resp = split_resp[1]
+            try:
+                split_resp = serv_resp.split(',',1)
+                Rbnonce = int(split_resp[0])
+                encr_server_resp = split_resp[1]
+            except:
+                Logger.log("Server reponse in unexpected format", self.machine)
+                return False
 
             decr_server_resp = self.decrypt_message(encr_server_resp,
                                               self.shared_key)
 
             #Split the decrypted message to get the filler, client nonce, and (g^b)modp
-            split_resp = decr_server_resp.split(',')
-            filler = split_resp[0]
-            nonce = int(split_resp[1])
-            gbmodp = int(split_resp[2])
+            try:
+                split_resp = decr_server_resp.split(',')
+                filler = split_resp[0]
+                nonce = int(split_resp[1])
+                gbmodp = int(split_resp[2])
+            except:
+                Logger.log("Server reponse in unexpected format", self.machine)
+                return False
 
             if self.debug:
                 Logger.log("Server Response (Rbnonce, [E(server , Ranonce, (g^b)modp)])", self.machine)
