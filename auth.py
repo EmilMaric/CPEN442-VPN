@@ -16,17 +16,16 @@ class Authentication(object):
     client_verify_str = "thisisclient"
     server_verify_str = "thisisserver"
     client_str = "CLIENT"
-    server_str = "SERVER"
 
-    def __init__(self, shared_key, TCPconn, debug, machine):
+    def __init__(self, shared_key, conn, debug=False, is_server=False):
         #print "Shared Key: " + str(shared_key) + "Size: " + str(sys.getsizeof(shared_key))
         sha256_hash = SHA256.new()
         sha256_hash.update(str(shared_key))
         self.shared_key = sha256_hash.digest()
-        self.TCPconn = TCPconn
+        self.conn = conn
         self.session_key = 0
         self.debug = debug
-        self.machine = machine
+        self.is_server = is_server
 
     def int_to_bytes(self, value):
         b = bytearray()
@@ -48,8 +47,8 @@ class Authentication(object):
     def encrypt_message(self, message, session_key):
         iv = Random.new().read(AES.block_size)
         if self.debug:
-            Logger.log("-- Encrypting Message --", self.machine)
-            Logger.log("IV: " + iv.encode("hex"), self.machine )
+            Logger.log("-- Encrypting Message --", is_server=self.is_server)
+            Logger.log("IV: " + iv.encode("hex"), is_server=self.is_server)
 
         msg = str(message) + (((16 - len(message)) % 16) * ' ') # pad message with spaces
         cipher = AES.new(str(session_key), AES.MODE_CBC, iv)
@@ -59,23 +58,30 @@ class Authentication(object):
     def decrypt_message(self, message, session_key):
         iv = message[0:16]
         if self.debug:
-            Logger.log("-- Decrypting Message --", self.machine)
-            Logger.log("IV: " + iv.encode("hex"), self.machine )
+            Logger.log("-- Decrypting Message --", is_server=self.is_server)
+            Logger.log("IV: " + iv.encode("hex"), is_server=self.is_server)
 
         cipher = AES.new(str(session_key), AES.MODE_CBC, iv);
         plaintext = cipher.decrypt(message[16:])
         return plaintext
 
     def get_message(self):
-        return self.TCPconn.receive()
+        msg = None
+        while not msg:
+            msg = self.conn.receive()
+        return msg
 
     def send(self, message):
-        self.TCPconn.send(message)
+        self.conn.send(message)
 
     def mutualauth(self):
-        if (self.machine == self.server_str): # Server Mode
-            #Wait for client to reach out
+        if self.is_server:
+            # Server Mode
+
+            # Wait for client to reach out
             response = self.get_message()
+
+            print('Hello World')
 
             #Client response is in the form: ["thisisclient,Ranonce"]
             try:
@@ -83,13 +89,13 @@ class Authentication(object):
                 filler = split_resp[0]
                 Ranonce = int(split_resp[1])
             except:
-                Logger.log("Server reponse in unexpected format", self.machine)
+                Logger.log("Server reponse in unexpected format", is_server=True)
                 return False
 
             if self.debug:
-                Logger.log("Client Response ([thisisclient, Ranonce])", self.machine)
-                Logger.log("Filler: " + filler, self.machine)
-                Logger.log("Ra-nonce: " + str(hex(Ranonce)), self.machine)
+                Logger.log("Client Response ([thisisclient, Ranonce])", is_server=True)
+                Logger.log("Filler: " + filler, is_server=True)
+                Logger.log("Ra-nonce: " + str(hex(Ranonce)), is_server=True)
                 print "\n"
 
             if (filler != self.client_verify_str):
@@ -97,16 +103,16 @@ class Authentication(object):
                 print('Mutual Authentication failed')
                 return False
 
-            #Server response is in the form : ["Rbnonce,E("server",Ranonce,(g^b)modp)]
+            # Server response is in the form : ["Rbnonce,E("server",Ranonce,(g^b)modp)]
             Rbnonce = uuid.uuid4().int
             b = random.getrandbits(128)
             gbmodp = pow(self.g, b, self.p)
 
             if self.debug:
-                Logger.log("Constructing Server Response (Rbnonce, [E(server , Ranonce, (g^b)modp)])", self.machine)
-                Logger.log("b value: " + str(hex(b)), self.machine)
-                Logger.log("Rb-nonce: " + str(hex(Rbnonce)), self.machine)
-                Logger.log("(g^b)modp: " + str(hex(gbmodp)), self.machine)
+                Logger.log("Constructing Server Response (Rbnonce, [E(server , Ranonce, (g^b)modp)])", is_server=True)
+                Logger.log("b value: " + str(hex(b)), is_server=True)
+                Logger.log("Rb-nonce: " + str(hex(Rbnonce)), is_server=True)
+                Logger.log("(g^b)modp: " + str(hex(gbmodp)), is_server=True)
                 print "\n"
 
             serv_resp = self.server_verify_str + "," + str(Ranonce) + "," + str(gbmodp)
@@ -114,7 +120,7 @@ class Authentication(object):
                                             self.shared_key)
 
             if self.debug:
-                Logger.log("Encrypted message length: " + str(len(encr_serv_resp[16:])), self.machine)
+                Logger.log("Encrypted message length: " + str(len(encr_serv_resp[16:])), is_server=True)
 
             self.send(str(Rbnonce) + "," + encr_serv_resp)
 
@@ -131,14 +137,14 @@ class Authentication(object):
                 received_nonce = int(split_resp[1])
                 gamodp = int(split_resp[2])
             except:
-                Logger.log("Server reponse in unexpected format", self.machine)
+                Logger.log("Server reponse in unexpected format", is_server=True)
                 return False
 
             if self.debug:
-                Logger.log("Client Response ([E(client , Rbnonce, (g^a)modp)])", self.machine)
-                Logger.log("Filler: " + str(filler), self.machine)
-                Logger.log("Rb-nonce: " + str(hex(received_nonce)), self.machine)
-                Logger.log("(g^a)modp: " + str(hex(gamodp)), self.machine)
+                Logger.log("Client Response ([E(client , Rbnonce, (g^a)modp)])", is_server=True)
+                Logger.log("Filler: " + str(filler), is_server=True)
+                Logger.log("Rb-nonce: " + str(hex(received_nonce)), is_server=True)
+                Logger.log("(g^a)modp: " + str(hex(gamodp)), is_server=True)
                 print "\n"
 
             if (filler != self.client_str or received_nonce != Rbnonce):
@@ -147,18 +153,20 @@ class Authentication(object):
 
             self.session_key = self.bytes_to_int(self.int_to_bytes(pow(gamodp, b, self.p))[:16])
             if self.debug:
-                Logger.log("Session Key: " + str(hex(self.session_key)), self.machine)
+                Logger.log("Session Key: " + str(hex(self.session_key)), is_server=True)
 
             #At this point, we can be sure that we are talking with the correct client
             #and we have a shared session key
             return True;
 
-        elif (self.machine == self.client_str): # Client Mode
+        else: 
+            # Client Mode
+
             #Generate a nonce and send this to the server
             #Initiate contact by sending the following message: ["thisisclient,Ranonce"]
             Ranonce = uuid.uuid4().int
             if self.debug:
-                Logger.log("Ra-nonce: " + str(hex(Ranonce)), self.machine)
+                Logger.log("Ra-nonce: " + str(hex(Ranonce)))
                 print "\n"
 
 
@@ -175,7 +183,7 @@ class Authentication(object):
                 Rbnonce = int(split_resp[0])
                 encr_server_resp = split_resp[1]
             except:
-                Logger.log("Server reponse in unexpected format", self.machine)
+                Logger.log("Server reponse in unexpected format")
                 return False
 
             decr_server_resp = self.decrypt_message(encr_server_resp,
@@ -188,15 +196,15 @@ class Authentication(object):
                 nonce = int(split_resp[1])
                 gbmodp = int(split_resp[2])
             except:
-                Logger.log("Server reponse in unexpected format", self.machine)
+                Logger.log("Server reponse in unexpected format")
                 return False
 
             if self.debug:
-                Logger.log("Server Response (Rbnonce, [E(server , Ranonce, (g^b)modp)])", self.machine)
-                Logger.log("Rbnonce: " + str(hex(Rbnonce)), self.machine)
-                Logger.log("Filler: " + filler, self.machine)
-                Logger.log("Nonce: " + str(nonce), self.machine)
-                Logger.log("(g^b)modp: " + str(hex(gbmodp)), self.machine)
+                Logger.log("Server Response (Rbnonce, [E(server , Ranonce, (g^b)modp)])")
+                Logger.log("Rbnonce: " + str(hex(Rbnonce)))
+                Logger.log("Filler: " + filler)
+                Logger.log("Nonce: " + str(nonce))
+                Logger.log("(g^b)modp: " + str(hex(gbmodp)))
                 print "\n"
 
             if (nonce != Ranonce or filler != self.server_verify_str):
@@ -208,9 +216,9 @@ class Authentication(object):
             gamodp = pow(self.g, a, self.p)
 
             if self.debug:
-                Logger.log("Constructing Client Response ([E(client , Rbnonce, (g^a)modp)])", self.machine)
-                Logger.log("A value: " + str(hex(a)), self.machine)
-                Logger.log("(g^a)modp: " + str(hex(gamodp)), self.machine)
+                Logger.log("Constructing Client Response ([E(client , Rbnonce, (g^a)modp)])")
+                Logger.log("A value: " + str(hex(a)))
+                Logger.log("(g^a)modp: " + str(hex(gamodp)))
                 print "\n"
 
             encr_client_resp = self.encrypt_message(self.client_str + "," + str(Rbnonce) + "," + str(gamodp),
@@ -221,12 +229,8 @@ class Authentication(object):
             self.session_key = self.bytes_to_int(self.int_to_bytes(pow(gbmodp, a, self.p))[:16])
 
             if self.debug:
-                Logger.log("Session Key: " + str(hex(self.session_key)), self.machine)
+                Logger.log("Session Key: " + str(hex(self.session_key)))
 
             #We are now guaranteed to be talking with our server
             #We also now have a shared session key
             return True
-        else:
-            print "Invalid Machine Type"
-            return False
-

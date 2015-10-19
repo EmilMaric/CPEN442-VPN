@@ -80,6 +80,41 @@ class VpnApp(App):
         self.chat_panel.write_info("Client connected from (%s, %i)" % (ip_addr, port))
         self.server.bind(client_socket, sender_print_callback=self.chat_panel.write_server, receiver_print_callback=self.chat_panel.write_client)
 
+    # specify which widgets to enable. All unspecified widgets will get disabled
+    def enable_disable_widgets(
+            self, 
+            clientmode=None, 
+            servermode=None, 
+            ip_address=None,
+            port=None,
+            shared_value=None,
+            connect=None,
+            disconnect=None,
+            chat_panel=None,
+            chat_input=None,
+            send_button=None,
+    ):
+
+        def enable_widget(enable, widget):
+            if enable is None:
+                return
+            if enable:
+                widget.disabled = False
+            else:
+                widget.disabled = True
+
+        enable_widget(clientmode, self.clientmode)
+        enable_widget(servermode, self.servermode)
+        enable_widget(ip_address, self.ip_address)
+        enable_widget(port, self.port)
+        enable_widget(shared_value, self.shared_value)
+        enable_widget(connect, self.connect)
+        enable_widget(disconnect, self.disconnect)
+        enable_widget(chat_panel, self.chat_panel)
+        enable_widget(chat_input, self.chat_input)
+        enable_widget(send_button, self.send_button)
+
+
     # called when 'Client' toggle button is pressed
     def client_callback(self, *args):
         state = args[1]
@@ -94,30 +129,33 @@ class VpnApp(App):
             self.settings_panel.remove_widget(self.ip_address)
             self.chat_panel.write_info("Switched to Server Mode")
 
+    def auth_callback(self):
+        pass
+
+    def connect_callback(self):
+        pass
+
     # called when 'Connect' button is pressed
     def connect_callback(self, btn):
         self.disconnect.disabled = True
 
         # get inserted port number
         port = 0
-
         for child in self.port.children:
             if isinstance(child, TextInput):
                 try:
                     port = int(child.text)
                 except ValueError:
-                    # TODO: print error to chat panel
                     self.chat_panel.write_info("Invalid port: " + child.text)
                     return
 
+        # get the shared key value
         shared_key = ""
         for child in self.shared_value.children:
             if isinstance(child, TextInput):
-                try:
-                    shared_key = str(child.text)
-                except ValueError:
-                    # TODO: print error to chat panel
-                    self.chat_panel.write_info("Invalid port: " + child.text)
+                shared_key = str(child.text)
+                if not shared_key:
+                    self.chat_panel.write_info("Shared key must have some value")
                     return
 
         # get the inserted ip address
@@ -135,41 +173,54 @@ class VpnApp(App):
 
         if (self.servermode.state == 'down'):
             # vpn is in 'server' mode
-            self.server = VpnServer(port, shared_key)
+            self.server = VpnServer(
+                    port, 
+                    shared_key,
+                    self.auth_callback,
+                    self.connect_callback,
+            )
             error, message = self.server.setup()
-            #TODO: Write to chat panel
-            
             if (error != 0):
                 # error while setting up socket
                 self.chat_panel.write_info(message)
                 return
             else:
-                self.clientmode.disabled=True
-                self.servermode.disabled=True
-                self.port.disabled=True
-                self.shared_value.disabled=True
-                self.connect.disabled=True
-                self.disconnect.disabled=False
                 self.chat_panel.write_info(message)
+                self.enable_disable_widgets(
+                    clientmode=False,
+                    servermode=False,
+                    port=False,
+                    shared_value=False,
+                    connect=False,
+                    disconnect=True,
+                    chat_input=False,
+                    send_button=False,
+                )
                 self.server.start(callback=self.client_connected_callback)
         else:
             # vpn is in 'client' mode 
-            self.client = VpnClient(ip_address, port, shared_key)
+            self.client = VpnClient(
+                    ip_address, 
+                    port, 
+                    shared_key
+            )
             error, message = self.client.connect()
-
             if (error != 0):
                 self.chat_panel.write_info(message)
                 return
             else:
-                self.clientmode.disabled=True
-                self.servermode.disabled=True
-                self.ip_address.disabled=True
-                self.port.disabled=True
-                self.shared_value.disabled=True
-                self.connect.disabled=True
-                self.disconnect.disabled=False
                 self.chat_panel.write_info(message)
-                self.client.bind(sender_print_callback=self.chat_panel.write_client, receiver_print_callback=self.chat_panel.write_server)
+                self.enable_disable_widgets(
+                    clientmode=False,
+                    servermode=False,
+                    ip_address=False,
+                    port=False,
+                    shared_value=False,
+                    connect=False,
+                    disconnect=True,
+                    chat_input=False,
+                    send_button=False,
+                )
         
     def disconnect_callback(self, instance):
         if self.servermode.state == 'down':
@@ -323,23 +374,6 @@ class VpnApp(App):
                 self.client.sender.close()
             if self.client.receiver:
                 self.client.receiver.close()
-
-    class MessageReceiver(threading.Thread):
-        def __init__(self, app, connection):
-            threading.Thread.__init__(self)
-            self.keep_alive = True
-            self.conn = connection
-            self.app = app
-
-        def run(self):
-            while (self.keep_alive and self.app.connection_state):
-                msg = None
-                msg = self.conn.receive()
-                if (msg):
-                    self.app.chat_panel.text += "Received: " + msg + "\n"
-
-        def close(self):
-            self.keep_alive = False
 
 
 if __name__ == "__main__":
