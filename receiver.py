@@ -2,6 +2,7 @@ import socket
 import threading
 import errno
 import struct
+from logger import Logger
 
 
 class Receiver(threading.Thread):
@@ -71,7 +72,9 @@ class MessageReceiver(threading.Thread):
         while self.keep_alive:
             msg = self.conn.receive()
             if msg:
+                # TODO: unencrypt
                 self.chat_panel.write_message(self.name, msg)
+                Logger.log("Received msg from socket: "+msg, self.conn.is_server)
 
     def close(self):
         self.keep_alive = False

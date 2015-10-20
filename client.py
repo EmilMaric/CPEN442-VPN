@@ -5,6 +5,7 @@ from Queue import Queue
 from auth import Authentication
 from sender import Sender
 from receiver import Receiver
+from logger import Logger
 
 
 class VpnClient(object):
@@ -17,6 +18,7 @@ class VpnClient(object):
         self.send_queue = Queue()
         self.receive_queue = Queue()
         self.waiting = True
+        self.is_server=False
 
     def connect(self):
         try:
@@ -33,6 +35,7 @@ class VpnClient(object):
             self.bind() # Added because we need the send/recv threads running for authentication
             if (auth.mutualauth()):
                 print "Server Authenticated!"
+                Logger.log("Connected to Server", self.is_server)
                 authenticated = True
                 return (0, "Connected to (%s, %i)" % (self.ip_addr, self.port))
             else:
@@ -48,6 +51,7 @@ class VpnClient(object):
 
     def send(self, msg):
         self.send_queue.put(msg)
+        Logger.log("Put message on send queue: " + msg, self.is_server)
 
     def bind(self):
         self.sender = Sender(self.socket, self.send_queue, self)
@@ -58,6 +62,7 @@ class VpnClient(object):
     def close(self):
         self.sender.close()
         self.receiver.close()
+        Logger.log("Connection closing", self.is_server)
 
     def receive(self):
         if (not self.receive_queue.empty()):
