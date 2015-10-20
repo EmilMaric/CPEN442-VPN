@@ -23,6 +23,7 @@ class Receiver(threading.Thread):
         while (self.keep_alive):
             try:
                 msg = self.socket.recv(8192)
+                Logger.log("Received msg from socket: "+msg, self.conn.is_server)
                 if len(msg) == 0:
                     raise socket.error(errno.ENOTCONN)
                 msg = leftover + msg
@@ -74,7 +75,6 @@ class MessageReceiver(threading.Thread):
             if msg:
                 # TODO: unencrypt
                 self.chat_panel.write_message(self.name, msg)
-                Logger.log("Received msg from socket: "+msg, self.conn.is_server)
 
     def close(self):
         self.keep_alive = False
