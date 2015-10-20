@@ -61,8 +61,8 @@ class VpnServer(object):
         self.listener.close()
         if self.sender:
             self.sender.close()
-        if self.receiver
-        self.receiver.close()
+        if self.receiver:
+            self.receiver.close()
 
     def receive(self):
         if not self.receive_queue.empty():
