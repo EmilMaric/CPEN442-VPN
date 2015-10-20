@@ -72,6 +72,54 @@ class Authentication(object):
         plaintext = cipher.decrypt(message[16:])
         return plaintext
 
+    def get_mac(self, msg):
+        #cbc-mac requires zeros initialization vector
+        iv = 0
+
+        cipher = AES.new(str(self.session_key), AES.MODE_CBC, iv)
+        ciphertext = cipher.encrypt(msg)
+
+        # The mac is the last block of the message
+        # block size here is 128 bits or 16 bytes.
+        # To get the last block, we simply use
+        # string splicing
+        mac = ciphertext[-16:]
+
+        #Now, encrypt the mac using self.mac_key
+        iv = Random.new().read(AES.block_size)
+        cipher = AES.new(str(self.mac_key), AES.MODE_CBC, iv)
+        encr_mac = cipher.encrypt(mac)
+
+        if self.debug:
+            Logger.log("Cipher text is: " + ciphertext, is_server=self.is_server)
+            Logger.log("Unencrypted mac is: " + mac, is_server=self.is_server)
+            Logger.log("Encrypted mac is: " + encr_mac, is_serve=self.is_server)
+
+        #Return the iv + encr_mac
+        return iv + encr_mac
+    
+    # encr_msg -> combination of iv+mac
+    # plaintext -> plain text from which the mac was computer from
+    def verify_integrity(self, encr_msg, plaintext):
+        iv = encr_msg[0:16]
+        encr_mac = encr_msg[16:]
+
+        #calculate the expected value of the mac
+        cipher = AES.new(str(self.session_key), AES.MODE_CBC, 0)
+        ciphertext = cipher.encrypt(plaintext)
+
+        mac = ciphertext[-16:0]
+
+        #Now encrypt this mac using the iv received
+        #from the other machine
+        cipher = AES.new(str(self.mac_key),AES.MODE_CBC, iv)
+        expected_mac = cipher.encrypt(cipher)
+        
+        if(expected_mac == encr_mac):
+            return True
+        else
+            return False
+
     def get_message(self):
         msg = None
         while not msg:
