@@ -418,20 +418,20 @@ class VpnApp(App):
             self.chat_panel.write_info("Lost connection to server")
         
 
-    def close(self):
-        if self.server:
-            self.server.close()
-            if self.server.sender:
-                self.server.sender.close()
-            if self.server.receiver:
-                self.server.receiver.close()
-            self.server.listener.close()
-        if self.client:
-            self.client.close()
-            if self.client.sender:
-                self.client.sender.close()
-            if self.client.receiver:
-                self.client.receiver.close()
+#    def close(self):
+#        if self.server:
+#            self.server.close()
+#            if self.server.sender:
+#                self.server.sender.close()
+#            if self.server.receiver:
+#                self.server.receiver.close()
+#            self.server.listener.close()
+#        if self.client:
+#            self.client.close()
+#            if self.client.sender:
+#                self.client.sender.close()
+#            if self.client.receiver:
+#                self.client.receiver.close()
 
 
 if __name__ == "__main__":

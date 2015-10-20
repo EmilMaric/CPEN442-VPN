@@ -59,6 +59,7 @@ class VpnServer(object):
 
     def close(self):
         self.listener.close()
+        self.socket.close()
         if self.sender:
             self.sender.close()
         if self.receiver:
