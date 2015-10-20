@@ -5,18 +5,23 @@ import struct
 
 class Sender(threading.Thread):
 
-    def __init__(self, socket, queue):
+    def __init__(self, socket, queue, conn):
         threading.Thread.__init__(self)
         self.socket = socket
-        self.keep_alive = True
         self.queue = queue
+        self.conn = conn
+        self.keep_alive = True
 
     def run(self):
+        self.socket.setblocking(0)
         while (self.keep_alive):
             if not self.queue.empty():
                 msg = self.queue.get()
                 msg = struct.pack('>I', len(msg)) + msg
-                self.socket.sendall(msg)
+                try:
+                    self.socket.sendall(msg)
+                except socket.error:
+                    self.conn.broken_conn_callback()
         self.socket.close()
 
     def close(self):

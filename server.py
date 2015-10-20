@@ -10,14 +10,15 @@ from receiver import Receiver
 
 class VpnServer(object):
 
-    def __init__(self, port, shared_key, auth_callback, connect_callback):
+    def __init__(self, port, shared_key, connected_callback, broken_conn_callback):
         self.port = port
         self.shared_key = shared_key
-        self.auth_callback = auth_callback
-        self.connect_callback = connect_callback
+        self.connected_callback = connected_callback
+        self.broken_conn_callback = broken_conn_callback
         self.send_queue = Queue()
         self.receive_queue = Queue()
         self.authenticated = False
+        self.waiting = True
 
     def setup(self):
         try:
@@ -38,20 +39,29 @@ class VpnServer(object):
         self.send_queue.put(msg)
 
     def start(self, callback=None):
-        self.listener = Listener(self.socket, self.shared_key, self)
+        self.listener = Listener(self.socket, self.shared_key, self, self.connected_callback)
         self.listener.start()
 
     def bind(self, client_socket):
-        self.sender = Sender(client_socket, self.send_queue)
-        self.receiver = Receiver(client_socket, self.receive_queue)
+        self.sender = Sender(client_socket, self.send_queue, self)
+        self.receiver = Receiver(client_socket, self.receive_queue, self)
         self.sender.start()
         self.receiver.start()
 
+    def broken_conn(self, client_socket):
+        self.sender.close()
+        self.send_queue.queue.clear()
+        self.receiver.close()
+        self.receive_queue.queue.clear()
+        self.waiting = True
+
     def close(self):
         self.listener.close()
+        self.sender.close()
+        self.receiver.close()
 
     def receive(self):
-        if (not self.receive_queue.empty()):
+        if not self.receive_queue.empty():
             return self.receive_queue.get()
         else:
             return None

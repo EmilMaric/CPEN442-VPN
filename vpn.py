@@ -14,9 +14,10 @@ from kivy.uix.textinput import TextInput
 from kivy.uix.togglebutton import ToggleButton
 from kivy.uix.button import Button
 from kivy.uix.behaviors import ToggleButtonBehavior
-from TCPconnection import TCPconnection
+
 from server import VpnServer
 from client import VpnClient
+from receiver import MessageReceiver
 
 
 class ColoredBoxLayout(BoxLayout):
@@ -68,17 +69,34 @@ class ChatPanel(TextInput):
         server_msg = "(%s) [SERVER]     " % (time)
         self.write(server_msg + message)
 
+    def write_message(self, name, message):
+        time = datetime.datetime.now().time().strftime('%H:%M')
+        header = "(%s) [%s]     " %(time, name)
+        self.write(header + message)
+
 
 class VpnApp(App):
 
     def __init__(self, **kwargs):
+        super(VpnApp, self).__init__(**kwargs)
         self.client = None
         self.server = None
-        super(VpnApp, self).__init__(**kwargs)
+        self.message_receiver = None
 
-    def client_connected_callback(self, client_socket, ip_addr, port):
-        self.chat_panel.write_info("Client connected from (%s, %i)" % (ip_addr, port))
-        self.server.bind(client_socket, sender_print_callback=self.chat_panel.write_server, receiver_print_callback=self.chat_panel.write_client)
+    def client_connected_callback(self, ip_addr, port):
+        self.enable_disable_widgets(
+            chat_input = True,
+            send_button = True
+        )
+        sender = "SERVER"
+        conn = self.client
+        chat_panel = self.chat_panel
+        if self.servermode.state == "down":
+            self.chat_panel.write_info("Client connected from (%s, %i)" % (ip_addr, port))
+            sender = "CLIENT"
+            conn = self.server
+        self.message_receiver = MessageReceiver(sender, conn, chat_panel)
+        self.message_receiver.start()
 
     # specify which widgets to enable. All unspecified widgets will get disabled
     def enable_disable_widgets(
@@ -129,12 +147,6 @@ class VpnApp(App):
             self.settings_panel.remove_widget(self.ip_address)
             self.chat_panel.write_info("Switched to Server Mode")
 
-    def auth_callback(self):
-        pass
-
-    def connect_callback(self):
-        pass
-
     # called when 'Connect' button is pressed
     def connect_callback(self, btn):
         self.disconnect.disabled = True
@@ -176,8 +188,8 @@ class VpnApp(App):
             self.server = VpnServer(
                     port, 
                     shared_key,
-                    self.auth_callback,
-                    self.connect_callback,
+                    self.client_connected_callback,
+                    self.broken_conn_callback,
             )
             error, message = self.server.setup()
             if (error != 0):
@@ -202,7 +214,8 @@ class VpnApp(App):
             self.client = VpnClient(
                     ip_address, 
                     port, 
-                    shared_key
+                    shared_key,
+                    self.broken_conn_callback,
             )
             error, message = self.client.connect()
             if (error != 0):
@@ -221,6 +234,7 @@ class VpnApp(App):
                     chat_input=False,
                     send_button=False,
                 )
+                self.client_connected_callback(ip_address, port)
         
     def disconnect_callback(self, instance):
         if self.servermode.state == 'down':
@@ -229,7 +243,8 @@ class VpnApp(App):
         else:
             self.client.close()
             self.chat_panel.write_info("Disconnecting from server...")
-
+        if self.message_receiver:
+            self.message_receiver.close()
         self.clientmode.disabled=False
         self.servermode.disabled=False
         self.ip_address.disabled=False
@@ -241,8 +256,10 @@ class VpnApp(App):
     def send_msg(self, btn):
         msg = self.chat_input.text
         if self.servermode.state == 'down':
+            self.chat_panel.write_server(msg)
             self.server.send(msg)
         else:
+            self.chat_panel.write_client(msg)
             self.client.send(msg)
         self.chat_input.text = ""
     
@@ -360,6 +377,37 @@ class VpnApp(App):
         self.chat_layout.add_widget(self.input_layout)
         self.root.add_widget(self.chat_layout)
         return self.root
+
+    def broken_conn_callback(self):
+        if self.message_receiver:
+            self.message_receiver.close()
+        if self.server:
+            self.server.send_queue.queue.clear()
+            self.server.receive_queue.queue.clear()
+            self.server.sender.close()
+            self.server.receiver.close()
+            self.server.waiting = True
+            self.server.start(callback=self.client_connected_callback)
+            self.chat_panel.write_info("Client disconnected")
+        else:
+            self.client.send_queue.queue.clear()
+            self.client.receive_queue.queue.clear()
+            self.client.sender.close()
+            self.client.receiver.close()
+            self.client.waiting = True
+            self.enable_disable_widgets(
+                clientmode=True,
+                servermode=True,
+                ip_address=True,
+                port=True,
+                shared_value=True,
+                connect=True,
+                disconnect=False,
+                chat_input=False,
+                send_button=False,
+            )
+            self.chat_panel.write_info("Lost connection to server")
+        
 
     def close(self):
         if self.server:

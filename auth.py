@@ -67,7 +67,7 @@ class Authentication(object):
 
     def get_message(self):
         msg = None
-        while not msg:
+        while not msg and not self.conn.waiting:
             msg = self.conn.receive()
         return msg
 
@@ -124,12 +124,10 @@ class Authentication(object):
 
             #Wait for client's encrypted message             
             encr_client_resp = self.get_message()
-
-            decr_client_resp = self.decrypt_message(encr_client_resp,
-                                              self.shared_key)
-
+            
             #which is in the form: ["E("client",Rbnonce,(g^a)modp)"]
             try:
+                decr_client_resp = self.decrypt_message(encr_client_resp, self.shared_key)
                 split_resp = decr_client_resp.split(',')
                 filler = split_resp[0]
                 received_nonce = int(split_resp[1])
