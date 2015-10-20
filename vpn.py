@@ -393,6 +393,7 @@ class VpnApp(App):
             self.server.waiting = True
             self.server.start(callback=self.client_connected_callback)
             self.chat_panel.write_info("Client disconnected")
+            self.chat_panel.write_info("Listening for connections...")
             self.enable_disable_widgets(
                 chat_input=False,
                 send_button=False,
