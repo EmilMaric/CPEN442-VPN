@@ -389,6 +389,9 @@ class VpnApp(App):
             self.server.waiting = True
             self.server.start(callback=self.client_connected_callback)
             self.chat_panel.write_info("Client disconnected")
+            self.enable_disable_widgets(
+                chat_input=False,
+                send_button=False,
         else:
             self.client.send_queue.queue.clear()
             self.client.receive_queue.queue.clear()
