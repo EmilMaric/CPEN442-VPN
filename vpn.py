@@ -392,6 +392,7 @@ class VpnApp(App):
             self.enable_disable_widgets(
                 chat_input=False,
                 send_button=False,
+            )
         else:
             self.client.send_queue.queue.clear()
             self.client.receive_queue.queue.clear()
