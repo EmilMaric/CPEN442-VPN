@@ -6,6 +6,7 @@ from auth import Authentication
 from listener import Listener
 from sender import Sender
 from receiver import Receiver
+from logger import Logger
 
 
 class VpnServer(object):
@@ -21,6 +22,7 @@ class VpnServer(object):
         self.waiting = True
         self.sender = None
         self.receiver = None
+        self.is_server = True
 
     def setup(self):
         try:
@@ -31,6 +33,7 @@ class VpnServer(object):
         try:
             self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.socket.bind(('', self.port))
+            Logger.log("Listening for connections...", self.is_server)
             self.socket.listen(1) 
         except socket.error:
             return (-1, "Could not bind socket to port " + str(self.port))
@@ -39,6 +42,7 @@ class VpnServer(object):
 
     def send(self, msg):
         self.send_queue.put(msg)
+        Logger.log("Put message on send queue: "+ msg, self.is_server)
 
     def start(self, callback=None):
         self.listener = Listener(self.socket, self.shared_key, self, self.connected_callback)
@@ -51,6 +55,7 @@ class VpnServer(object):
         self.receiver.start()
 
     def broken_conn(self, client_socket):
+        Logger.log("Broken connection", self.is_server)
         self.sender.close()
         self.send_queue.queue.clear()
         self.receiver.close()
@@ -64,6 +69,7 @@ class VpnServer(object):
             self.sender.close()
         if self.receiver:
             self.receiver.close()
+        Logger.log("Connection closing", self.is_server)
 
     def receive(self):
         if not self.receive_queue.empty():
