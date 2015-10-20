@@ -60,9 +60,12 @@ class VpnClient(object):
         self.receiver.start()
 
     def close(self):
+        Logger.log("Connection closing", self.is_server)
+        self.send_queue.queue.clear()
+        self.receive_queue.queue.clear()
         self.sender.close()
         self.receiver.close()
-        Logger.log("Connection closing", self.is_server)
+        self.waiting = True
 
     def receive(self):
         if (not self.receive_queue.empty()):

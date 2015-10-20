@@ -236,25 +236,6 @@ class VpnApp(App):
                 )
                 self.client_connected_callback(ip_address, port)
         
-    def disconnect_callback(self, instance):
-        if self.servermode.state == 'down':
-            self.server.close()
-            self.chat_panel.write_info("Closing Server...")
-        else:
-            self.client.close()
-            self.chat_panel.write_info("Disconnecting from server...")
-        if self.message_receiver:
-            self.message_receiver.close()
-        self.clientmode.disabled=False
-        self.servermode.disabled=False
-        self.ip_address.disabled=False
-        self.port.disabled=False
-        self.shared_value.disabled=False
-        self.connect.disabled=False
-        self.disconnect.disabled=True
-        self.chat_input.disabled=True
-        self.send_button.disabled=True
-
     def send_msg(self, btn):
         msg = self.chat_input.text
         if self.servermode.state == 'down':
@@ -386,11 +367,7 @@ class VpnApp(App):
         if self.message_receiver:
             self.message_receiver.close()
         if self.server:
-            self.server.send_queue.queue.clear()
-            self.server.receive_queue.queue.clear()
-            self.server.sender.close()
-            self.server.receiver.close()
-            self.server.waiting = True
+            self.server.broken_conn()
             self.server.start(callback=self.client_connected_callback)
             self.chat_panel.write_info("Client disconnected")
             self.chat_panel.write_info("Listening for connections...")
@@ -399,11 +376,7 @@ class VpnApp(App):
                 send_button=False,
             )
         else:
-            self.client.send_queue.queue.clear()
-            self.client.receive_queue.queue.clear()
-            self.client.sender.close()
-            self.client.receiver.close()
-            self.client.waiting = True
+            self.client.close()
             self.enable_disable_widgets(
                 clientmode=True,
                 servermode=True,
@@ -417,7 +390,35 @@ class VpnApp(App):
             )
             self.chat_panel.write_info("Lost connection to server")
         
+    def disconnect_callback(self, instance):
+        if self.servermode.state == 'down':
+            self.server.close()
+            self.chat_panel.write_info("Closing Server...")
+        else:
+            self.client.close()
+            self.chat_panel.write_info("Disconnecting from server...")
+        if self.message_receiver:
+            self.message_receiver.close()
+        self.clientmode.disabled=False
+        self.servermode.disabled=False
+        self.ip_address.disabled=False
+        self.port.disabled=False
+        self.shared_value.disabled=False
+        self.connect.disabled=False
+        self.disconnect.disabled=True
+        self.chat_input.disabled=True
+        self.send_button.disabled=True
 
+
+    def close(self):
+        if self.servermode.state == 'down':
+            self.server.close()
+            self.chat_panel.write_info("Closing Server...")
+        else:
+            self.client.close()
+            self.chat_panel.write_info("Disconnecting from server...")
+        if self.message_receiver:
+            self.message_receiver.close()
 #    def close(self):
 #        if self.server:
 #            self.server.close()
