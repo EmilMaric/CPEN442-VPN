@@ -213,7 +213,7 @@ class Authentication(object):
 
             if self.debug:
                 Logger.log("Constructing Client Response ([E(client , Rbnonce, (g^a)modp)])")
-                Logger.log("A value: " + str(hex(a)))
+                Logger.log("a value: " + str(hex(a)))
                 Logger.log("(g^a)modp: " + str(hex(gamodp)))
                 print "\n"
 
