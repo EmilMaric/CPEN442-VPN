@@ -19,6 +19,8 @@ class VpnServer(object):
         self.receive_queue = Queue()
         self.authenticated = False
         self.waiting = True
+        self.sender = None
+        self.receiver = None
 
     def setup(self):
         try:
@@ -57,7 +59,9 @@ class VpnServer(object):
 
     def close(self):
         self.listener.close()
-        self.sender.close()
+        if self.sender:
+            self.sender.close()
+        if self.receiver
         self.receiver.close()
 
     def receive(self):
