@@ -26,6 +26,7 @@ class VpnClient(object):
             return (-1, "Could not create socket")
 
         try:
+            self.socket.settimeout(10)
             self.socket.connect((self.ip_addr, self.port))
             self.waiting = False
             auth = Authentication(self.shared_key, self, True, is_server=False)

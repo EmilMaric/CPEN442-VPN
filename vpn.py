@@ -424,6 +424,7 @@ class VpnApp(App):
                 self.server.sender.close()
             if self.server.receiver:
                 self.server.receiver.close()
+            self.server.listener.close()
         if self.client:
             self.client.close()
             if self.client.sender:
