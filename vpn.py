@@ -252,6 +252,8 @@ class VpnApp(App):
         self.shared_value.disabled=False
         self.connect.disabled=False
         self.disconnect.disabled=True
+        self.chat_input.disabled=True
+        self.send_button.disabled=True
 
     def send_msg(self, btn):
         msg = self.chat_input.text
@@ -376,6 +378,8 @@ class VpnApp(App):
         self.chat_layout.add_widget(self.chat_panel)
         self.chat_layout.add_widget(self.input_layout)
         self.root.add_widget(self.chat_layout)
+        self.chat_input.disabled=True
+        self.send_button.disabled=True
         return self.root
 
     def broken_conn_callback(self):
