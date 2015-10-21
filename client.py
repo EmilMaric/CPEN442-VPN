@@ -2,7 +2,7 @@ import socket
 import threading
 
 from Queue import Queue
-from auth import Authentication
+from auth import Authentication, encrypt_message, decrypt_message
 from sender import Sender
 from receiver import Receiver
 from logger import Logger
@@ -54,7 +54,7 @@ class VpnClient(object):
 
     def send(self, msg):
         if (self.authenticated):
-            emsg = self.auth.encrypt_message(msg, self.sessionkey)
+            emsg = encrypt_message(msg, self.sessionkey, False)
             self.send_queue.put(emsg)
             Logger.log("Put message on send queue: " + msg, self.is_server)
         else:
@@ -80,7 +80,7 @@ class VpnClient(object):
         if (not self.receive_queue.empty()):
             msg = self.receive_queue.get()
             if (self.authenticated):
-                msg = self.auth.decrypt_message(msg, self.sessionkey)
+                msg = decrypt_message(msg, self.sessionkey, False)
                 Logger.log("Decrypted msg: "+ msg, self.is_server)
             return msg
         else:

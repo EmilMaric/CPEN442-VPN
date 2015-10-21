@@ -14,14 +14,13 @@ class Listener(threading.Thread):
         self.shared_key = shared_key
         self.server = server
         self.connected_callback = connected_callback
-        self.authenticated=False
         self.auth = None
 
     def run(self):
         self.socket.setblocking(0)
-        authenticated = False
+        self.server.authenticated = False
 
-        while (self.keep_alive and authenticated == False):
+        while (self.keep_alive and self.server.authenticated == False):
             try:
                 client_socket, addr = self.socket.accept()
                 self.server.waiting = False
@@ -29,11 +28,12 @@ class Listener(threading.Thread):
                 self.server.bind(client_socket) 
                 if (self.auth.mutualauth()):
                     print "Client Authenticated!"
-                    self.authenticated = True
+                    self.server.authenticated = True
+                    self.server.sessionkey = self.auth.get_sessionkey()
                     self.connected_callback(addr[0], addr[1])
                 else:
                     print "Unable to authenticate"
-                    self.authenticated=False
+                    self.server.authenticated=False
                     self.auth=False
                     self.server.broken_conn_callback()
         
@@ -44,5 +44,5 @@ class Listener(threading.Thread):
 
     def close(self):
         self.keep_alive = False
-        self.authenticated = False
+        self.server.authenticated = False
         self.auth=None

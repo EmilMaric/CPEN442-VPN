@@ -7,6 +7,7 @@ from listener import Listener
 from sender import Sender
 from receiver import Receiver
 from logger import Logger
+from auth import encrypt_message, decrypt_message
 
 
 class VpnServer(object):
@@ -42,11 +43,9 @@ class VpnServer(object):
         return (0, "VPN server set to listen on port " + str(self.port))
 
     def send(self, msg):
-        self.authenticated=self.listener.authenticated
         if (self.authenticated):
-            self.sessionkey=self.listener.auth.get_sessionkey()
             Logger.log("sessionkey: " +self.sessionkey, self.is_server)
-            emsg = self.listener.auth.encrypt_message(msg, self.sessionkey)
+            emsg = encrypt_message(msg, self.sessionkey, True)
             self.send_queue.put(emsg)
             Logger.log("Put message on send queue: "+ msg, self.is_server)
         else:
@@ -54,12 +53,10 @@ class VpnServer(object):
             Logger.log("Put message on send queue: "+ msg, self.is_server)
     
     def receive(self):
-        self.authenticated = self.listener.authenticated
         if not self.receive_queue.empty():
             msg = self.receive_queue.get()
             if (self.authenticated):
-                self.sessionkey = self.listener.auth.get_sessionkey()
-                msg = self.listener.auth.decrypt_message(msg, self.sessionkey)
+                msg = decrypt_message(msg, self.sessionkey, True)
                 Logger.log("Decrypted msg: "+ msg, self.is_server)
             return msg
         else:
@@ -95,5 +92,3 @@ class VpnServer(object):
             self.sender.close()
         if self.receiver:
             self.receiver.close()
-
-
