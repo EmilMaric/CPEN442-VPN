@@ -6,7 +6,6 @@ from auth import Authentication
 from sender import Sender
 from receiver import Receiver
 from logger import Logger
-import sys
 
 
 class VpnClient(object):

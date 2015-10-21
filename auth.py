@@ -4,7 +4,6 @@ import random
 from Crypto import Random
 from Crypto.Cipher import AES
 from Crypto.Hash import SHA256
-import sys
 
 from logger import Logger
 
@@ -39,14 +38,6 @@ class Authentication(object):
             value = value // 256
 
         return b
-
-#    def bytes_to_int(self, bytes):
-#        ret_int = 0
-#    
-#        while(len(bytes) > 0):
-#            ret_int = ret_int*256 + bytes.pop()
-#    
-#        return ret_int
 
     def bytes_to_string(self, bytes):
         key = ''
