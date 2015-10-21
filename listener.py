@@ -31,16 +31,21 @@ class Listener(threading.Thread):
                     print "Client Authenticated!"
                     self.authenticated = True
                     self.connected_callback(addr[0], addr[1])
+                    self.server.clear_queues()
                 else:
                     print "Unable to authenticate"
                     self.authenticated=False
-                    self.auth=False
+                    self.auth=None
                     self.server.broken_conn_callback()
         
             except socket.error:
                 pass
         if not self.keep_alive:
             self.socket.close()
+
+    def broken_conn(self):
+        self.authenticated = False
+        self.auth=None
 
     def close(self):
         self.keep_alive = False

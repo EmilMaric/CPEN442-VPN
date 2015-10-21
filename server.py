@@ -45,7 +45,7 @@ class VpnServer(object):
         self.authenticated=self.listener.authenticated
         if (self.authenticated):
             self.sessionkey=self.listener.auth.get_sessionkey()
-            Logger.log("sessionkey: " +self.sessionkey, self.is_server)
+            Logger.log("session key: " +self.sessionkey, self.is_server)
             emsg = self.listener.auth.encrypt_message(msg, self.sessionkey)
             self.send_queue.put(emsg)
             Logger.log("Put message on send queue: "+ msg, self.is_server)
@@ -59,6 +59,7 @@ class VpnServer(object):
             msg = self.receive_queue.get()
             if (self.authenticated):
                 self.sessionkey = self.listener.auth.get_sessionkey()
+                Logger.log("session key: " +self.sessionkey, self.is_server)
                 msg = self.listener.auth.decrypt_message(msg, self.sessionkey)
                 Logger.log("Decrypted msg: "+ msg, self.is_server)
             return msg
@@ -74,6 +75,10 @@ class VpnServer(object):
         self.receiver = Receiver(client_socket, self.receive_queue, self)
         self.sender.start()
         self.receiver.start()
+    
+    def clear_queues(self):
+        self.receive_queue.queue.clear()
+        self.send_queue.queue.clear()
 
     def broken_conn(self):
         Logger.log("Broken connection", self.is_server)
@@ -83,6 +88,8 @@ class VpnServer(object):
         self.receiver.close()
         self.waiting = True
         self.authenticated = False
+        if (self.listener):
+            self.listener.broken_conn()
 
     def close(self):
         Logger.log("Connection closing", self.is_server)

@@ -228,8 +228,8 @@ class Authentication(object):
             #Calculate the session key
             self.session_key = self.bytes_to_string(self.int_to_bytes(pow(gbmodp, a, self.p))[:16])
 
-#if self.debug:
-#               Logger.log("Session Key: " + str(hex(self.session_key)))
+            #if self.debug:
+            #Logger.log("Session Key: " + str(hex(self.session_key)))
 
             #We are now guaranteed to be talking with our server
             #We also now have a shared session key

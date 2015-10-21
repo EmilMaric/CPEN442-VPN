@@ -73,6 +73,7 @@ class MessageReceiver(threading.Thread):
         while self.keep_alive:
             msg = self.conn.receive()
             if msg:
+                Logger.log("Message Receiver: "+msg, self.conn.is_server)
                 self.chat_panel.write_message(self.name, msg)
 
     def close(self):
