@@ -62,17 +62,31 @@ class ChatPanel(TextInput):
     def write_client(self, message):
         time = datetime.datetime.now().time().strftime('%H:%M')
         client_msg = "(%s) [CLIENT]     " % (time)
-        self.write(client_msg + message)
+        self.write(client_msg + self.wrapmessage(message))
 
     def write_server(self, message):
         time = datetime.datetime.now().time().strftime('%H:%M')
         server_msg = "(%s) [SERVER]     " % (time)
-        self.write(server_msg + message)
+        self.write(server_msg + self.wrapmessage(message))
+
+    def wrapmessage(self, message):
+        if (len(message) > 76):
+            wrap = "\n"
+            start = 0
+            end = 76
+            while (end < len(message)):
+                wrap += message[start:end] + "\n"
+                start += 76
+                end += 76
+            wrap += message[start:len(message)]
+            return wrap
+        else:
+            return message
 
     def write_message(self, name, message):
         time = datetime.datetime.now().time().strftime('%H:%M')
         header = "(%s) [%s]     " %(time, name)
-        self.write(header + message)
+        self.write(header + self.wrapmessage(message))
 
 
 class VpnApp(App):
