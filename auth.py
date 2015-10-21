@@ -227,7 +227,6 @@ class Authentication(object):
 
             #Calculate the session key
             self.session_key = self.bytes_to_string(self.int_to_bytes(pow(gbmodp, a, self.p))[:16])
-            Logger.log("size of session_key: " + str(sys.getsizeof(self.session_key)))
 
 #if self.debug:
 #               Logger.log("Session Key: " + str(hex(self.session_key)))

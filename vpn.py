@@ -411,12 +411,10 @@ class VpnApp(App):
 
 
     def close(self):
-        if self.servermode.state == 'down':
+        if self.server:
             self.server.close()
-            self.chat_panel.write_info("Closing Server...")
-        else:
+        if self.client:
             self.client.close()
-            self.chat_panel.write_info("Disconnecting from server...")
         if self.message_receiver:
             self.message_receiver.close()
 #    def close(self):
