@@ -41,8 +41,6 @@ class VpnClient(object):
                 Logger.log("Connected to Server", self.is_server)
                 self.authenticated = True
                 self.sessionkey = self.auth.get_sessionkey()
-                Logger.log(str(self.sessionkey), self.is_server)
-                Logger.log(str(sys.getsizeof(str(self.sessionkey))))
                 return (0, "Connected to (%s, %i)" % (self.ip_addr, self.port))
             else:
                 print "Could not authenticate"

@@ -47,8 +47,8 @@ class VpnServer(object):
             self.sessionkey=self.listener.auth.get_sessionkey()
             Logger.log("sessionkey: " +self.sessionkey, self.is_server)
             emsg = self.listener.auth.encrypt_message(msg, self.sessionkey)
-            self.send_queue.put(msg)
-            Logger.log("Put message on send queue: "+ emsg, self.is_server)
+            self.send_queue.put(emsg)
+            Logger.log("Put message on send queue: "+ msg, self.is_server)
         else:
             self.send_queue.put(msg)
             Logger.log("Put message on send queue: "+ msg, self.is_server)
