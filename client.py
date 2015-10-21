@@ -40,6 +40,7 @@ class VpnClient(object):
                 Logger.log("Connected to Server", self.is_server)
                 self.authenticated = True
                 self.sessionkey = self.auth.get_sessionkey()
+                self.clear_queues()
                 return (0, "Connected to (%s, %i)" % (self.ip_addr, self.port))
             else:
                 print "Could not authenticate"
@@ -47,10 +48,15 @@ class VpnClient(object):
                 self.broken_conn_callback()
                 return (-1, "Authentication failed")
         except socket.error:
+            self.authenticated = False
+            self.broken_conn_callback()
             return (-1, "Could not connect to (%s, %i)" % (self.ip_addr, self.port))
 
         return (-1, "Could not connect to (%s, %i)" % (self.ip_addr, self.port))
 
+    def clear_queues(self):
+        self.receive_queue.queue.clear()
+        self.send_queue.queue.clear()
 
     def send(self, msg):
         if (self.authenticated):

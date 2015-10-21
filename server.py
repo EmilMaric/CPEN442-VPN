@@ -71,6 +71,10 @@ class VpnServer(object):
         self.receiver = Receiver(client_socket, self.receive_queue, self)
         self.sender.start()
         self.receiver.start()
+    
+    def clear_queues(self):
+        self.receive_queue.queue.clear()
+        self.send_queue.queue.clear()
 
     def broken_conn(self):
         Logger.log("Broken connection", self.is_server)
@@ -80,6 +84,8 @@ class VpnServer(object):
         self.receiver.close()
         self.waiting = True
         self.authenticated = False
+        if (self.listener):
+            self.listener.broken_conn()
 
     def close(self):
         Logger.log("Connection closing", self.is_server)

@@ -73,7 +73,6 @@ class MessageReceiver(threading.Thread):
         while self.keep_alive:
             msg = self.conn.receive()
             if msg:
-                print "Emil auth: " + str(self.conn.authenticated)
                 self.chat_panel.write_message(self.name, msg)
 
     def close(self):
