@@ -54,6 +54,8 @@ class VpnServer(object):
             Logger.log("Put message on send queue: "+ msg, self.is_server)
     
     def receive(self):
+        self.sessionkey = self.listener.auth.get_sessionkey()
+        self.authenticated = self.listener.authenticated
         if not self.receive_queue.empty():
             msg = self.receive_queue.get()
             if (self.authenticated):
