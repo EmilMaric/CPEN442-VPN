@@ -54,7 +54,8 @@ class VpnServer(object):
             Logger.log("Put message on send queue: "+ msg, self.is_server)
     
     def receive(self):
-        self.sessionkey = self.listener.auth.get_sessionkey()
+        if (self.listener.auth != None):
+            self.sessionkey = self.listener.auth.get_sessionkey()
         self.authenticated = self.listener.authenticated
         if not self.receive_queue.empty():
             msg = self.receive_queue.get()
@@ -82,6 +83,7 @@ class VpnServer(object):
         self.sender.close()
         self.receiver.close()
         self.waiting = True
+        self.authenticated = False
 
     def close(self):
         Logger.log("Connection closing", self.is_server)
@@ -89,6 +91,7 @@ class VpnServer(object):
         self.receive_queue.queue.clear()
         self.listener.close()
         self.socket.close()
+        self.authenticated = False
         if self.sender:
             self.sender.close()
         if self.receiver:

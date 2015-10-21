@@ -15,6 +15,7 @@ class Listener(threading.Thread):
         self.server = server
         self.connected_callback = connected_callback
         self.authenticated=False
+        self.auth = None
 
     def run(self):
         self.socket.setblocking(0)
@@ -32,7 +33,10 @@ class Listener(threading.Thread):
                     self.connected_callback(addr[0], addr[1])
                 else:
                     print "Unable to authenticate"
+                    self.authenticated=False
+                    self.auth=False
                     self.server.broken_conn_callback()
+        
             except socket.error:
                 pass
         if not self.keep_alive:
@@ -40,3 +44,5 @@ class Listener(threading.Thread):
 
     def close(self):
         self.keep_alive = False
+        self.authenticated = False
+        self.auth=None
