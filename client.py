@@ -6,6 +6,7 @@ from auth import Authentication
 from sender import Sender
 from receiver import Receiver
 from logger import Logger
+import sys
 
 
 class VpnClient(object):
@@ -19,6 +20,7 @@ class VpnClient(object):
         self.receive_queue = Queue()
         self.waiting = True
         self.is_server=False
+        self.authenticated=False
 
     def connect(self):
         try:
@@ -31,16 +33,20 @@ class VpnClient(object):
             self.socket.settimeout(10)
             self.socket.connect((self.ip_addr, self.port))
             self.waiting = False
-            auth = Authentication(self.shared_key, self, True, is_server=False)
+            self.auth = Authentication(self.shared_key, self, True, is_server=False)
+            self.sessionkey = self.auth.get_sessionkey()
             self.bind() # Added because we need the send/recv threads running for authentication
-            if (auth.mutualauth()):
+            if (self.auth.mutualauth()):
                 print "Server Authenticated!"
                 Logger.log("Connected to Server", self.is_server)
-                authenticated = True
+                self.authenticated = True
+                self.sessionkey = self.auth.get_sessionkey()
+                Logger.log(str(self.sessionkey), self.is_server)
+                Logger.log(str(sys.getsizeof(str(self.sessionkey))))
                 return (0, "Connected to (%s, %i)" % (self.ip_addr, self.port))
             else:
                 print "Could not authenticate"
-                authenticated = False
+                self.authenticated = False
                 self.broken_conn_callback()
                 return (-1, "Authentication failed")
         except socket.error:
@@ -50,8 +56,13 @@ class VpnClient(object):
 
 
     def send(self, msg):
-        self.send_queue.put(msg)
-        Logger.log("Put message on send queue: " + msg, self.is_server)
+        if (self.authenticated):
+            emsg = self.auth.encrypt_message(msg, self.sessionkey)
+            self.send_queue.put(emsg)
+            Logger.log("Put message on send queue: " + msg, self.is_server)
+        else:
+            self.send_queue.put(msg)
+            Logger.log("Put message on send queue: " + msg, self.is_server)
 
     def bind(self):
         self.sender = Sender(self.socket, self.send_queue, self)
@@ -69,6 +80,10 @@ class VpnClient(object):
 
     def receive(self):
         if (not self.receive_queue.empty()):
-            return self.receive_queue.get()
+            msg = self.receive_queue.get()
+            if (self.authenticated):
+                msg = self.auth.decrypt_message(msg, self.sessionkey)
+                Logger.log("Decrypted msg: "+ msg, self.is_server)
+            return msg
         else:
             return None

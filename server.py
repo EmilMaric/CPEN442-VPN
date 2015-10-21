@@ -23,6 +23,7 @@ class VpnServer(object):
         self.sender = None
         self.receiver = None
         self.is_server = True
+        self.sessionkey=''
 
     def setup(self):
         try:
@@ -41,8 +42,26 @@ class VpnServer(object):
         return (0, "VPN server set to listen on port " + str(self.port))
 
     def send(self, msg):
-        self.send_queue.put(msg)
-        Logger.log("Put message on send queue: "+ msg, self.is_server)
+        self.authenticated=self.listener.authenticated
+        if (self.authenticated):
+            self.sessionkey=self.listener.auth.get_sessionkey()
+            Logger.log("sessionkey: " +self.sessionkey, self.is_server)
+            emsg = self.listener.auth.encrypt_message(msg, self.sessionkey)
+            self.send_queue.put(msg)
+            Logger.log("Put message on send queue: "+ emsg, self.is_server)
+        else:
+            self.send_queue.put(msg)
+            Logger.log("Put message on send queue: "+ msg, self.is_server)
+    
+    def receive(self):
+        if not self.receive_queue.empty():
+            msg = self.receive_queue.get()
+            if (self.authenticated):
+                msg = self.listener.auth.decrypt_message(msg, self.sessionkey)
+                Logger.log("Decrypted msg: "+ msg, self.is_server)
+            return msg
+        else:
+            return None
 
     def start(self, callback=None):
         self.listener = Listener(self.socket, self.shared_key, self, self.connected_callback)
@@ -73,8 +92,4 @@ class VpnServer(object):
         if self.receiver:
             self.receiver.close()
 
-    def receive(self):
-        if not self.receive_queue.empty():
-            return self.receive_queue.get()
-        else:
-            return None
+

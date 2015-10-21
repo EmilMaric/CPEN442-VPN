@@ -4,6 +4,7 @@ import random
 from Crypto import Random
 from Crypto.Cipher import AES
 from Crypto.Hash import SHA256
+import sys
 
 from logger import Logger
 
@@ -26,6 +27,9 @@ class Authentication(object):
         self.session_key = 0
         self.debug = debug
         self.is_server = is_server
+    
+    def get_sessionkey(self):
+        return self.session_key
 
     def int_to_bytes(self, value):
         b = bytearray()
@@ -34,15 +38,23 @@ class Authentication(object):
             b.append(value % 256)
             value = value // 256
 
-        b.reverse()
         return b
 
-    def bytes_to_int(self, bytes):
-        result = 0;
+#    def bytes_to_int(self, bytes):
+#        ret_int = 0
+#    
+#        while(len(bytes) > 0):
+#            ret_int = ret_int*256 + bytes.pop()
+#    
+#        return ret_int
 
+    def bytes_to_string(self, bytes):
+        key = ''
         for b in bytes:
-            result = result * 256 + int(b)
-        return result
+            key += "0x{:02x}".format(b)[2:4]
+        #Logger.log("b: "+ "0x{:02x}".format(b))
+        #Logger.log("bytes to string: " + key)
+        return key
 
     def encrypt_message(self, message, session_key):
         iv = Random.new().read(AES.block_size)
@@ -109,6 +121,7 @@ class Authentication(object):
             if self.debug:
                 Logger.log("Constructing Server Response (Rbnonce, [E(server , Ranonce, (g^b)modp)])", is_server=True)
                 Logger.log("b value: " + str(hex(b)), is_server=True)
+                Logger.log("shared key" + self.shared_key, True)
                 Logger.log("Rb-nonce: " + str(hex(Rbnonce)), is_server=True)
                 Logger.log("(g^b)modp: " + str(hex(gbmodp)), is_server=True)
                 print "\n"
@@ -147,9 +160,9 @@ class Authentication(object):
                 print('Encrypted message from client is not correct. Mutual Authentication Failed')
                 return False
 
-            self.session_key = self.bytes_to_int(self.int_to_bytes(pow(gamodp, b, self.p))[:16])
-            if self.debug:
-                Logger.log("Session Key: " + str(hex(self.session_key)), is_server=True)
+            self.session_key = self.bytes_to_string(self.int_to_bytes(pow(gamodp, b, self.p))[:16])
+                #if self.debug:
+                #Logger.log("Session Key: " + str(hex(self.session_key)), is_server=True)
 
             #At this point, we can be sure that we are talking with the correct client
             #and we have a shared session key
@@ -222,10 +235,11 @@ class Authentication(object):
             self.send(encr_client_resp)
 
             #Calculate the session key
-            self.session_key = self.bytes_to_int(self.int_to_bytes(pow(gbmodp, a, self.p))[:16])
+            self.session_key = self.bytes_to_string(self.int_to_bytes(pow(gbmodp, a, self.p))[:16])
+            Logger.log("size of session_key: " + str(sys.getsizeof(self.session_key)))
 
-            if self.debug:
-                Logger.log("Session Key: " + str(hex(self.session_key)))
+#if self.debug:
+#               Logger.log("Session Key: " + str(hex(self.session_key)))
 
             #We are now guaranteed to be talking with our server
             #We also now have a shared session key
