@@ -13,6 +13,7 @@ from kivy.graphics import Color, Rectangle
 from kivy.uix.textinput import TextInput
 from kivy.uix.togglebutton import ToggleButton
 from kivy.uix.button import Button
+from kivy.uix.switch import Switch
 from kivy.uix.behaviors import ToggleButtonBehavior
 
 from server import VpnServer
@@ -82,11 +83,13 @@ class VpnApp(App):
         self.client = None
         self.server = None
         self.message_receiver = None
+        self.debug = False
 
     def client_connected_callback(self, ip_addr, port):
         self.enable_disable_widgets(
-            chat_input = True,
-            send_button = True
+            chat_input=True,
+            send_button=True,
+            debug_continue=False,
         )
         sender = "SERVER"
         conn = self.client
@@ -111,6 +114,8 @@ class VpnApp(App):
             chat_panel=None,
             chat_input=None,
             send_button=None,
+            debug_switch=None,
+            debug_continue=None,
     ):
 
         def enable_widget(enable, widget):
@@ -131,13 +136,15 @@ class VpnApp(App):
         enable_widget(chat_panel, self.chat_panel)
         enable_widget(chat_input, self.chat_input)
         enable_widget(send_button, self.send_button)
+        enable_widget(debug_continue, self.debug_continue)
+        enable_widget(debug_switch, self.debug_switch)
 
 
     # called when 'Client' toggle button is pressed
     def client_callback(self, *args):
         state = args[1]
         if state == "down":
-            self.settings_panel.add_widget(self.ip_address, 5)
+            self.settings_panel.add_widget(self.ip_address, 7)
             self.chat_panel.write_info("Switched to Client Mode")
     
     # called when 'Server' toggle button is pressed
@@ -146,6 +153,13 @@ class VpnApp(App):
         if state == "down":
             self.settings_panel.remove_widget(self.ip_address)
             self.chat_panel.write_info("Switched to Server Mode")
+
+    # called when 'debug' toggled
+    def debug_callback(self, btn, value):
+        if value:
+            self.debug = True
+        else:
+            self.debug = False
 
     # called when 'Connect' button is pressed
     def connect_callback(self, btn):
@@ -160,7 +174,7 @@ class VpnApp(App):
                 except ValueError:
                     self.chat_panel.write_info("Invalid port: " + child.text)
                     return
-
+    
         # get the shared key value
         shared_key = ""
         for child in self.shared_value.children:
@@ -190,6 +204,8 @@ class VpnApp(App):
                     shared_key,
                     self.client_connected_callback,
                     self.broken_conn_callback,
+                    self.debug_continue,
+                    self.debug,
             )
             error, message = self.server.setup()
             if (error != 0):
@@ -207,6 +223,8 @@ class VpnApp(App):
                     disconnect=True,
                     chat_input=False,
                     send_button=False,
+                    debug_switch=False, 
+                    debug_continue=False,
                 )
                 self.server.start(callback=self.client_connected_callback)
         else:
@@ -233,6 +251,8 @@ class VpnApp(App):
                     disconnect=True,
                     chat_input=False,
                     send_button=False,
+                    debug_switch=False,
+                    debug_continue=True,
                 )
                 self.client_connected_callback(ip_address, port)
         
@@ -308,6 +328,25 @@ class VpnApp(App):
         self.shared_value = self.SettingsEntry(text="Shared Secret Value")
         self.settings_panel.add_widget(self.shared_value)
 
+        # add debug mode
+        self.debug_boxlayout = BoxLayout(orientation="vertical", padding=30)
+        self.debug_label = Label(text="Debug Mode", size=(300, 50), size_hint=(1, None))
+        self.debug_boxlayout.add_widget(self.debug_label)
+        self.debug_switch = Switch(active=False, size=(300, 50), size_hint=(1, None))
+        self.debug_switch.bind(active=self.debug_callback)
+        self.debug_boxlayout.add_widget(self.debug_switch)
+        self.settings_panel.add_widget(self.debug_boxlayout)
+
+        # add debug continue button
+        self.debug_continue = Button(
+            text="Continue",
+            background_color=(0,0,1,1),
+            size=(300, 100),
+            size_hint=(1, None),
+            disabled=True,
+        )
+        self.settings_panel.add_widget(self.debug_continue)
+
         # add empty space
         empty_widget = Widget()
         self.settings_panel.add_widget(empty_widget)
@@ -374,6 +413,7 @@ class VpnApp(App):
             self.enable_disable_widgets(
                 chat_input=False,
                 send_button=False,
+                debug_continue=False,
             )
         else:
             self.client.close()
@@ -387,6 +427,8 @@ class VpnApp(App):
                 disconnect=False,
                 chat_input=False,
                 send_button=False,
+                debug_switch=True,
+                debug_continue=False,
             )
             self.chat_panel.write_info("Lost connection to server")
         
@@ -408,7 +450,8 @@ class VpnApp(App):
         self.disconnect.disabled=True
         self.chat_input.disabled=True
         self.send_button.disabled=True
-
+        self.debug_switch.disabled=False
+        self.debug_continue.disabled=True
 
     def close(self):
         if self.server:

@@ -12,7 +12,8 @@ from auth import encrypt_message, decrypt_message
 
 class VpnServer(object):
 
-    def __init__(self, port, shared_key, connected_callback, broken_conn_callback):
+    def __init__(self, port, shared_key, connected_callback, broken_conn_callback, 
+                 debug_continue, debug):
         self.port = port
         self.shared_key = shared_key
         self.connected_callback = connected_callback
@@ -20,6 +21,8 @@ class VpnServer(object):
         self.send_queue = Queue()
         self.receive_queue = Queue()
         self.authenticated = False
+        self.debug_continue = debug_continue
+        self.debug = debug
         self.waiting = True
         self.sender = None
         self.receiver = None
@@ -67,6 +70,7 @@ class VpnServer(object):
         self.listener.start()
 
     def bind(self, client_socket):
+        self.debug_continue.disabled = self.debug
         self.sender = Sender(client_socket, self.send_queue, self)
         self.receiver = Receiver(client_socket, self.receive_queue, self)
         self.sender.start()

@@ -20,6 +20,8 @@ class VpnClient(object):
         self.waiting = True
         self.is_server=False
         self.authenticated=False
+        self.sender = None
+        self.receiver = None
 
     def connect(self):
         try:
@@ -77,8 +79,10 @@ class VpnClient(object):
         Logger.log("Connection closing", self.is_server)
         self.send_queue.queue.clear()
         self.receive_queue.queue.clear()
-        self.sender.close()
-        self.receiver.close()
+        if self.sender:
+            self.sender.close()
+        if self.receiver:
+            self.receiver.close()
         self.waiting = True
         self.authenticated = False
 
