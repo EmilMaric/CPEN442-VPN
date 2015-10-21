@@ -41,12 +41,19 @@ class Authentication(object):
 
     def __init__(self, shared_key, conn, debug=False, is_server=False):
         #print "Shared Key: " + str(shared_key) + "Size: " + str(sys.getsizeof(shared_key))
+        #We need to generate two keys - one for encrypting
+        #the message and one for sending a MAC message
         sha256_hash = SHA256.new()
         sha256_hash.update(str(shared_key))
         self.shared_key = sha256_hash.digest()
-        self.conn = conn
-        self.session_key = 0
-        self.debug = debug
+
+        sha256_hash = SHA256.new()
+        sha256_hash.update(str(self.shared_key))
+        self.mac_key = sha256_hash.digest()
+        
+        print "Shared Key: " + self.shared_key
+        print "Mac Key: " + self.mac_key
+
         self.is_server = is_server
     
     def get_sessionkey(self):
@@ -89,6 +96,53 @@ class Authentication(object):
         cipher = AES.new(str(session_key), AES.MODE_CBC, iv);
         plaintext = cipher.decrypt(message[16:])
         return plaintext
+
+    def get_mac(self, msg):
+        #cbc-mac requires zeros initialization vector
+        iv = 0
+
+        cipher = AES.new(str(self.session_key), AES.MODE_CBC, iv)
+        ciphertext = cipher.encrypt(msg)
+
+        # The mac is the last block of the message
+        # block size here is 128 bits or 16 bytes.
+        # To get the last block, we simply use
+        # string splicing
+        mac = ciphertext[-16:]
+
+        #Now, encrypt the mac using self.mac_key
+        #We can use ecb mode here since its only
+        #one block
+        cipher = AES.new(str(self.mac_key), AES.MODE_ECB)
+        encr_mac = cipher.encrypt(mac)
+
+        if self.debug:
+            Logger.log("Cipher text is: " + ciphertext, is_server=self.is_server)
+            Logger.log("Unencrypted mac is: " + mac, is_server=self.is_server)
+            Logger.log("Encrypted mac is: " + encr_mac, is_serve=self.is_server)
+
+        #Return the encr_mac
+        return encr_mac
+    
+    # encr_mac -> encrypted mac from other machine
+    # plaintext -> plain text from which the mac was computed from
+    def verify_integrity(self, encr_mac, plaintext):
+
+        #calculate the expected value of the mac
+        cipher = AES.new(str(self.session_key), AES.MODE_CBC, 0)
+        ciphertext = cipher.encrypt(plaintext)
+
+        #Get the last block
+        mac = ciphertext[-16:]
+
+        #Now encrypt this mac
+        cipher = AES.new(str(self.mac_key),AES.MODE_ECB)
+        expected_mac = cipher.encrypt(cipher)
+         
+        if(expected_mac == encr_mac):
+            return True
+        else
+            return False
 
     def get_message(self):
         msg = None
