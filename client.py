@@ -74,6 +74,7 @@ class VpnClient(object):
         self.sender.close()
         self.receiver.close()
         self.waiting = True
+        self.authenticated = False
 
     def receive(self):
         if (not self.receive_queue.empty()):
