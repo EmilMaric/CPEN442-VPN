@@ -212,10 +212,11 @@ class Authentication(object):
 
             # Generate a nonce and send this to the server
             # Initiate contact by sending the following message: ["thisisclient,Ranonce"]
-            Logger.log("### Client initiating Key Authentication...", self.is_server)
+            Logger.log("### Client initiating Key Authentication.. ", self.is_server)
 
             Ranonce = uuid.uuid4().int
             if self.debug:
+                print "\n"
                 Logger.log("Ra-nonce: " + str(hex(Ranonce)))
                 print "\n"
 
@@ -241,6 +242,8 @@ class Authentication(object):
             if (valid == False):  # check cbc mac validation
                 Logger.log("CBC Mac validation failed", self.is_server)
                 return False
+
+            self.wait_for_continue()
 
             # Split the decrypted message to get the filler, client nonce, and (g^b)modp
             try:
@@ -270,6 +273,7 @@ class Authentication(object):
             gamodp = pow(self.g, a, self.p)
 
             if self.debug:
+                print "\n"
                 Logger.log("Constructing Client Response ([E(client , Rbnonce, (g^a)modp)])")
                 Logger.log("a value: " + str(hex(a)))
                 Logger.log("(g^a)modp: " + str(hex(gamodp)))
@@ -279,12 +283,13 @@ class Authentication(object):
                                                     self.shared_key)  # TODO Encrpt this using Aes in cbc mode
             self.send(encr_client_resp)
 
+            self.wait_for_continue()
             # Calculate the session key
             self.session_key = self.bytes_to_string(self.int_to_bytes(pow(gbmodp, a, self.p))[:16])
 
             a = 0  # forget a value for PFS
-            # if self.debug:
-            # Logger.log("Session Key: " + str(hex(self.session_key)))
+            if self.debug:
+                Logger.log("Session Key: " + str(hex(self.session_key)))
 
             # We are now guaranteed to be talking with our server
             # We also now have a shared session key
