@@ -10,11 +10,12 @@ from logger import Logger
 
 class VpnClient(object):
 
-    def __init__(self, ip_addr, port, shared_key, broken_conn_callback):
+    def __init__(self, ip_addr, port, shared_key, broken_conn_callback, app):
         self.ip_addr = ip_addr
         self.port = port
         self.shared_key = shared_key
         self.broken_conn_callback = broken_conn_callback
+        self.app = app
         self.send_queue = Queue()
         self.receive_queue = Queue()
         self.waiting = True
@@ -34,7 +35,7 @@ class VpnClient(object):
             self.socket.settimeout(10)
             self.socket.connect((self.ip_addr, self.port))
             self.waiting = False
-            self.auth = Authentication(self.shared_key, self, True, is_server=False)
+            self.auth = Authentication(self.shared_key, self, self.app, debug=True, is_server=False)
             self.sessionkey = self.auth.get_sessionkey()
             self.bind() # Added because we need the send/recv threads running for authentication
             if (self.auth.mutualauth()):
@@ -64,10 +65,10 @@ class VpnClient(object):
         if (self.authenticated):
             emsg = encrypt_message(msg, self.sessionkey, False)
             self.send_queue.put(emsg)
-            Logger.log("Put message on send queue: " + msg, self.is_server)
+            #Logger.log("Put message on send queue: " + msg, self.is_server)
         else:
             self.send_queue.put(msg)
-            Logger.log("Put message on send queue: " + msg, self.is_server)
+            #Logger.log("Put message on send queue: " + msg, self.is_server)
 
     def bind(self):
         self.sender = Sender(self.socket, self.send_queue, self)
@@ -85,13 +86,14 @@ class VpnClient(object):
             self.receiver.close()
         self.waiting = True
         self.authenticated = False
+        self.auth = None
 
     def receive(self):
         if (not self.receive_queue.empty()):
             msg = self.receive_queue.get()
+            Logger.log("Received decrypted msg: "+ msg, self.is_server)
             if (self.authenticated):
                 msg = decrypt_message(msg, self.sessionkey, False)
-                Logger.log("Decrypted msg: "+ msg, self.is_server)
             return msg
         else:
             return None

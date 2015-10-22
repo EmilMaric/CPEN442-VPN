@@ -23,7 +23,6 @@ class Receiver(threading.Thread):
         while (self.keep_alive):
             try:
                 msg = self.socket.recv(8192)
-                Logger.log("Received msg from socket: "+msg, self.conn.is_server)
                 if len(msg) == 0:
                     raise socket.error(errno.ENOTCONN)
                 msg = leftover + msg

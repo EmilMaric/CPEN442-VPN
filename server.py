@@ -13,7 +13,7 @@ from auth import encrypt_message, decrypt_message
 class VpnServer(object):
 
     def __init__(self, port, shared_key, connected_callback, broken_conn_callback, 
-                 debug_continue, debug):
+                 debug_continue, debug, app):
         self.port = port
         self.shared_key = shared_key
         self.connected_callback = connected_callback
@@ -22,6 +22,7 @@ class VpnServer(object):
         self.receive_queue = Queue()
         self.authenticated = False
         self.debug_continue = debug_continue
+        self.app = app
         self.debug = debug
         self.waiting = True
         self.sender = None
@@ -50,14 +51,15 @@ class VpnServer(object):
             Logger.log("sessionkey: " +self.sessionkey, self.is_server)
             emsg = encrypt_message(msg, self.sessionkey, True)
             self.send_queue.put(emsg)
-            Logger.log("Put message on send queue: "+ msg, self.is_server)
+            #Logger.log("Put message on send queue: "+ msg, self.is_server)
         else:
             self.send_queue.put(msg)
-            Logger.log("Put message on send queue: "+ msg, self.is_server)
+            #Logger.log("Put message on send queue: "+ msg, self.is_server)
     
     def receive(self):
         if not self.receive_queue.empty():
             msg = self.receive_queue.get()
+            Logger.log("Decrypted msg: "+ msg, self.is_server)
             if (self.authenticated):
                 msg = decrypt_message(msg, self.sessionkey, True)
                 Logger.log("Decrypted msg: "+ msg, self.is_server)
@@ -66,7 +68,7 @@ class VpnServer(object):
             return None
 
     def start(self, callback=None):
-        self.listener = Listener(self.socket, self.shared_key, self, self.connected_callback)
+        self.listener = Listener(self.socket, self.shared_key, self, self.connected_callback, self.app)
         self.listener.start()
 
     def bind(self, client_socket):

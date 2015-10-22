@@ -39,7 +39,7 @@ class Authentication(object):
     server_verify_str = "thisisserver"
     client_str = "CLIENT"
 
-    def __init__(self, shared_key, conn, debug=False, is_server=False):
+    def __init__(self, shared_key, conn, app, debug=False, is_server=False):
         #print "Shared Key: " + str(shared_key) + "Size: " + str(sys.getsizeof(shared_key))
         sha256_hash = SHA256.new()
         sha256_hash.update(str(shared_key))
@@ -47,6 +47,7 @@ class Authentication(object):
         self.conn = conn
         self.session_key = 0
         self.debug = debug
+        self.app = app
         self.is_server = is_server
     
     def get_sessionkey(self):
@@ -99,11 +100,18 @@ class Authentication(object):
     def send(self, message):
         self.conn.send(message)
 
+    def wait_for_continue(self):
+        if self.app.debug:
+            while not self.app.continue_pressed:
+                pass
+            self.app.continue_pressed = False
+                
     def mutualauth(self):
         if self.is_server:
             # Server Mode
 
             # Wait for client to reach out
+            Logger.log("### Server waiting for key authentication contact...", self.is_server)
             response = self.get_message()
 
             #Client response is in the form: ["thisisclient,Ranonce"]
@@ -121,10 +129,14 @@ class Authentication(object):
                 Logger.log("Ra-nonce: " + str(hex(Ranonce)), is_server=True)
                 print "\n"
 
+            self.wait_for_continue()
+
             if (filler != self.client_verify_str):
                 print('Initial Client message is not in the correct format. Received {}'.format(response))
                 print('Mutual Authentication failed')
                 return False
+
+            self.wait_for_continue()
 
             # Server response is in the form : ["Rbnonce,E("server",Ranonce,(g^b)modp)]
             Rbnonce = uuid.uuid4().int
@@ -148,6 +160,8 @@ class Authentication(object):
 
             self.send(str(Rbnonce) + "," + encr_serv_resp)
 
+            self.wait_for_continue()
+
             #Wait for client's encrypted message             
             encr_client_resp = self.get_message()
             
@@ -162,16 +176,23 @@ class Authentication(object):
                 Logger.log("Server reponse in unexpected format", is_server=True)
                 return False
 
+            self.wait_for_continue()
+
             if self.debug:
                 Logger.log("Client Response ([E(client , Rbnonce, (g^a)modp)])", is_server=True)
                 Logger.log("Filler: " + str(filler), is_server=True)
-                Logger.log("Rb-nonce: " + str(hex(received_nonce)), is_server=True)
+                Logger.log("Received-nonce: " + str(hex(received_nonce)), is_server=True)
                 Logger.log("(g^a)modp: " + str(hex(gamodp)), is_server=True)
                 print "\n"
 
             if (filler != self.client_str or received_nonce != Rbnonce):
                 print('Encrypted message from client is not correct. Mutual Authentication Failed')
+                print "FAIL:"
+                print "FILLER:" + filler + "."
+                print "RB_NONCE:" + str(hex(Rbnonce)) + "."
                 return False
+
+            self.wait_for_continue()
 
             self.session_key = self.bytes_to_string(self.int_to_bytes(pow(gamodp, b, self.p))[:16])
                 #if self.debug:
@@ -186,6 +207,7 @@ class Authentication(object):
 
             #Generate a nonce and send this to the server
             #Initiate contact by sending the following message: ["thisisclient,Ranonce"]
+            Logger.log("### Client initiating Key Authentication...", self.is_server)
             Ranonce = uuid.uuid4().int
             if self.debug:
                 Logger.log("Ra-nonce: " + str(hex(Ranonce)))

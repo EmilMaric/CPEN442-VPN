@@ -7,13 +7,14 @@ from auth import Authentication
 class Listener(threading.Thread):
     server_str = "SERVER" #TODO find better place for this
 
-    def __init__(self, socket, shared_key, server, connected_callback):
+    def __init__(self, socket, shared_key, server, connected_callback, app):
         threading.Thread.__init__(self)
         self.keep_alive = True
         self.socket = socket
         self.shared_key = shared_key
         self.server = server
         self.connected_callback = connected_callback
+        self.app = app
         self.auth = None
 
     def run(self):
@@ -24,8 +25,9 @@ class Listener(threading.Thread):
             try:
                 client_socket, addr = self.socket.accept()
                 self.server.waiting = False
-                self.auth = Authentication(self.shared_key, self.server, debug=True, is_server=True)
+                self.auth = Authentication(self.shared_key, self.server, self.app, debug=True, is_server=True)
                 self.server.bind(client_socket) 
+                self.app.debug_continue.disabled = False
                 if (self.auth.mutualauth()):
                     print "Client Authenticated!"
                     self.server.authenticated = True

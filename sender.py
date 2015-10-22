@@ -20,7 +20,6 @@ class Sender(threading.Thread):
                 msg = struct.pack('>I', len(msg)) + msg
                 try:
                     self.socket.sendall(msg)
-                    Logger.log("Sending message over socket: "+ msg, self.conn.is_server)
                 except socket.error:
                     self.conn.broken_conn_callback()
         self.socket.close()
