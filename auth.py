@@ -157,13 +157,9 @@ class Authentication(object):
 
             self.send(str(Rbnonce) + "," + encr_serv_resp)
 
-<<<<<<< HEAD
             self.wait_for_continue()
 
             #Wait for client's encrypted message             
-=======
-            # Wait for client's encrypted message
->>>>>>> cddbd889a024b2c72585edaab6c7197f060166aa
             encr_client_resp = self.get_message()
 
             # which is in the form: ["E("client",Rbnonce,(g^a)modp)"]
@@ -213,14 +209,9 @@ class Authentication(object):
         else:
             # Client Mode
 
-<<<<<<< HEAD
             #Generate a nonce and send this to the server
             #Initiate contact by sending the following message: ["thisisclient,Ranonce"]
             Logger.log("### Client initiating Key Authentication...", self.is_server)
-=======
-            # Generate a nonce and send this to the server
-            # Initiate contact by sending the following message: ["thisisclient,Ranonce"]
->>>>>>> cddbd889a024b2c72585edaab6c7197f060166aa
             Ranonce = uuid.uuid4().int
             if self.debug:
                 Logger.log("Ra-nonce: " + str(hex(Ranonce)))
