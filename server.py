@@ -12,7 +12,7 @@ from logger import Logger
 class VpnServer(object):
 
     def __init__(self, port, shared_key, connected_callback, broken_conn_callback, 
-                 debug_continue, debug):
+                 debug_continue, debug, app):
         self.port = port
         self.shared_key = shared_key
         self.connected_callback = connected_callback
@@ -27,6 +27,7 @@ class VpnServer(object):
         self.receiver = None
         self.is_server = True
         self.sessionkey=''
+        self.app = app
 
     def setup(self):
         try:
@@ -69,7 +70,7 @@ class VpnServer(object):
             return None
 
     def start(self, callback=None):
-        self.listener = Listener(self.socket, self.shared_key, self, self.connected_callback)
+        self.listener = Listener(self.socket, self.shared_key, self, self.connected_callback, self.app)
         self.listener.start()
 
     def bind(self, client_socket):

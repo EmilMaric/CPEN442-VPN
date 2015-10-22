@@ -8,6 +8,7 @@ from Crypto.Hash import SHA256
 from logger import Logger
 from mac import *
 
+
 class Authentication(object):
     # These values are public so they can be hardcoded
     shared_prime = 0xFFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E088A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE649286651ECE45B3DC2007CB8A163BF0598DA48361C55D39A69163FA8FD24CF5F83655D23DCA3AD961C62F356208552BB9ED529077096966D670C354E4ABC9804F1746C08CA18217C32905E462E36CE3BE39E772C180E86039B2783A2EC07A28FB5C55DF06F4C52C9DE2BCBF6955817183995497C515D2261898FA051015728E5A8AACAA68FFFFFFFFFFFFFFFF
@@ -18,12 +19,13 @@ class Authentication(object):
     server_verify_str = "thisisserver"
     client_str = "CLIENT"
 
-    def __init__(self, shared_key, conn, debug=False, is_server=False):
+    def __init__(self, shared_key, conn, app, debug=False, is_server=False):
         # We need to generate two keys - one for encrypting
         # the message and one for sending a MAC message
         self.debug = debug
         self.conn = conn
         self.is_server = is_server
+        self.app = app
 
         sha256_hash = SHA256.new()
         sha256_hash.update(str(shared_key))
@@ -70,6 +72,12 @@ class Authentication(object):
     def get_mackey(self):
         return self.mac_key
 
+    def wait_for_continue(self):
+        if self.app.debug:
+            while not self.app.continue_pressed:
+                pass
+            self.app.continue_pressed = False
+
     def int_to_bytes(self, value):
         b = bytearray()
 
@@ -100,6 +108,7 @@ class Authentication(object):
         if self.is_server:
             # Server Mode
 
+            Logger.log("### Server waiting for key authentication contact...", self.is_server)
             # Wait for client to reach out
             response = self.get_message()
 
@@ -118,6 +127,8 @@ class Authentication(object):
                 Logger.log("Ra-nonce: " + str(hex(Ranonce)), is_server=True)
                 print "\n"
 
+            self.wait_for_continue()
+
             if (filler != self.client_verify_str):
                 print('Initial Client message is not in the correct format. Received {}'.format(response))
                 print('Mutual Authentication failed')
@@ -129,6 +140,7 @@ class Authentication(object):
             gbmodp = pow(self.g, b, self.p)
 
             if self.debug:
+                print "\n"
                 Logger.log("Constructing Server Response (Rbnonce, [E(server , Ranonce, (g^b)modp)])", is_server=True)
                 Logger.log("b value: " + str(hex(b)), is_server=True)
                 Logger.log("shared key" + self.shared_key, True)
@@ -136,6 +148,9 @@ class Authentication(object):
                 Logger.log("(g^b)modp: " + str(hex(gbmodp)), is_server=True)
                 print "\n"
 
+            self.wait_for_continue()
+
+            # Create response, encrypt and send
             serv_resp = self.server_verify_str + "," + str(Ranonce) + "," + str(gbmodp)
             encr_serv_resp = self.encrypt_message(serv_resp,
                                                   self.shared_key)
@@ -164,20 +179,27 @@ class Authentication(object):
                 Logger.log("Server reponse in unexpected format", is_server=True)
                 return False
 
+            self.wait_for_continue() # continue, debug mode
+
             if self.debug:
+                print "\n"
                 Logger.log("Client Response ([E(client , Rbnonce, (g^a)modp)])", is_server=True)
                 Logger.log("Filler: " + str(filler), is_server=True)
-                Logger.log("Rb-nonce: " + str(hex(received_nonce)), is_server=True)
+                Logger.log("Received-nonce: " + str(hex(received_nonce)), is_server=True)
                 Logger.log("(g^a)modp: " + str(hex(gamodp)), is_server=True)
                 print "\n"
 
             if (filler != self.client_str or received_nonce != Rbnonce):
                 print('Encrypted message from client is not correct. Mutual Authentication Failed')
+                print "FAIL:"
+                print "FILLER:" + filler + "."
+                print "RB_NONCE:" + str(hex(Rbnonce)) + "."
                 return False
 
+            self.wait_for_continue()
             self.session_key = self.bytes_to_string(self.int_to_bytes(pow(gamodp, b, self.p))[:16])
-            # if self.debug:
-            # Logger.log("Session Key: " + str(hex(self.session_key)), is_server=True)
+            if self.debug:
+                Logger.log("Session Key: " + str(self.session_key), is_server=True)
 
             b = 0  # forget b - value for PFS
 
@@ -190,8 +212,11 @@ class Authentication(object):
 
             # Generate a nonce and send this to the server
             # Initiate contact by sending the following message: ["thisisclient,Ranonce"]
+            Logger.log("### Client initiating Key Authentication.. ", self.is_server)
+
             Ranonce = uuid.uuid4().int
             if self.debug:
+                print "\n"
                 Logger.log("Ra-nonce: " + str(hex(Ranonce)))
                 print "\n"
 
@@ -229,6 +254,7 @@ class Authentication(object):
                 return False
 
             if self.debug:
+                print "\n"
                 Logger.log("Server Response (Rbnonce, [E(server , Ranonce, (g^b)modp)])")
                 Logger.log("Rbnonce: " + str(hex(Rbnonce)))
                 Logger.log("Filler: " + filler)
@@ -245,6 +271,7 @@ class Authentication(object):
             gamodp = pow(self.g, a, self.p)
 
             if self.debug:
+                print "\n"
                 Logger.log("Constructing Client Response ([E(client , Rbnonce, (g^a)modp)])")
                 Logger.log("a value: " + str(hex(a)))
                 Logger.log("(g^a)modp: " + str(hex(gamodp)))
@@ -258,8 +285,8 @@ class Authentication(object):
             self.session_key = self.bytes_to_string(self.int_to_bytes(pow(gbmodp, a, self.p))[:16])
 
             a = 0  # forget a value for PFS
-            # if self.debug:
-            # Logger.log("Session Key: " + str(hex(self.session_key)))
+            if self.debug:
+                Logger.log("Session Key: " + str(self.session_key))
 
             # We are now guaranteed to be talking with our server
             # We also now have a shared session key
