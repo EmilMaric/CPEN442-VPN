@@ -52,7 +52,10 @@ class ChatPanel(TextInput):
 
     def write(self, message):
         self.lock.acquire()
-        self.text += message + "\n"
+        try:
+            self.text += message + "\n"
+        except UnicodeDecodeError:
+            pass
         self.lock.release()
 
     def write_info(self, message):
@@ -98,6 +101,7 @@ class VpnApp(App):
         self.server = None
         self.message_receiver = None
         self.debug = False
+        self.continue_pressed = False
 
     def client_connected_callback(self, ip_addr, port):
         self.enable_disable_widgets(
@@ -168,6 +172,9 @@ class VpnApp(App):
             self.settings_panel.remove_widget(self.ip_address)
             self.chat_panel.write_info("Switched to Server Mode")
 
+    def debug_continue_callback(self, instance):
+       self.continue_pressed = True
+
     # called when 'debug' toggled
     def debug_callback(self, btn, value):
         if value:
@@ -220,6 +227,7 @@ class VpnApp(App):
                     self.broken_conn_callback,
                     self.debug_continue,
                     self.debug,
+                    self
             )
             error, message = self.server.setup()
             if (error != 0):
@@ -248,6 +256,7 @@ class VpnApp(App):
                     port, 
                     shared_key,
                     self.broken_conn_callback,
+                    self
             )
             error, message = self.client.connect()
             if (error != 0):
@@ -362,6 +371,7 @@ class VpnApp(App):
             size_hint=(1, None),
             disabled=True,
         )
+        self.debug_continue.bind(on_press=self.debug_continue_callback)
         self.settings_panel.add_widget(self.debug_continue)
 
         # add empty space
@@ -477,21 +487,6 @@ class VpnApp(App):
             self.client.close()
         if self.message_receiver:
             self.message_receiver.close()
-#    def close(self):
-#        if self.server:
-#            self.server.close()
-#            if self.server.sender:
-#                self.server.sender.close()
-#            if self.server.receiver:
-#                self.server.receiver.close()
-#            self.server.listener.close()
-#        if self.client:
-#            self.client.close()
-#            if self.client.sender:
-#                self.client.sender.close()
-#            if self.client.receiver:
-#                self.client.receiver.close()
-
 
 if __name__ == "__main__":
     app = VpnApp()
