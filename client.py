@@ -2,7 +2,7 @@ import socket
 import threading
 
 from Queue import Queue
-from auth import Authentication, encrypt_message, decrypt_message
+from auth import Authentication
 from sender import Sender
 from receiver import Receiver
 from logger import Logger
@@ -61,7 +61,7 @@ class VpnClient(object):
 
     def send(self, msg):
         if (self.authenticated):
-            emsg = encrypt_message(msg, self.sessionkey, False)
+            emsg = self.auth.encrypt_message(msg, self.auth.get_sessionkey())
             self.send_queue.put(emsg)
             Logger.log("Put message on send queue: " + msg, self.is_server)
         else:
@@ -89,7 +89,11 @@ class VpnClient(object):
         if (not self.receive_queue.empty()):
             msg = self.receive_queue.get()
             if (self.authenticated):
-                msg = decrypt_message(msg, self.sessionkey, False)
+                msg, valid = self.auth.decrypt_message(msg, self.auth.get_sessionkey())
+
+                if valid is False:
+                    return None # ignore failed CBC authentication message
+
                 Logger.log("Decrypted msg: "+ msg, self.is_server)
             return msg
         else:

@@ -29,7 +29,7 @@ class Listener(threading.Thread):
                 if (self.auth.mutualauth()):
                     print "Client Authenticated!"
                     self.server.authenticated = True
-                    self.server.sessionkey = self.auth.get_sessionkey()
+                    self.server.auth = self.auth
                     self.connected_callback(addr[0], addr[1])
                     self.server.clear_queues()
                 else:
@@ -47,7 +47,13 @@ class Listener(threading.Thread):
         self.authenticated = False
         self.auth=None
 
+        if self.server is not None:
+            self.server.auth = None
+
     def close(self):
         self.keep_alive = False
         self.server.authenticated = False
         self.auth=None
+
+        if self.server is not None:
+            self.server.auth = None
