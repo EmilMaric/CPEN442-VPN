@@ -35,7 +35,6 @@ class VpnClient(object):
             self.socket.connect((self.ip_addr, self.port))
             self.waiting = False
             self.auth = Authentication(self.shared_key, self, True, is_server=False)
-            self.sessionkey = self.auth.get_sessionkey()
             self.bind() # Added because we need the send/recv threads running for authentication
             if (self.auth.mutualauth()):
                 print "Server Authenticated!"
