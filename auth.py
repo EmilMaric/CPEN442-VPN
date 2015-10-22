@@ -243,8 +243,6 @@ class Authentication(object):
                 Logger.log("CBC Mac validation failed", self.is_server)
                 return False
 
-            self.wait_for_continue()
-
             # Split the decrypted message to get the filler, client nonce, and (g^b)modp
             try:
                 split_resp = decr_server_resp.split(',')
@@ -283,13 +281,12 @@ class Authentication(object):
                                                     self.shared_key)  # TODO Encrpt this using Aes in cbc mode
             self.send(encr_client_resp)
 
-            self.wait_for_continue()
             # Calculate the session key
             self.session_key = self.bytes_to_string(self.int_to_bytes(pow(gbmodp, a, self.p))[:16])
 
             a = 0  # forget a value for PFS
             if self.debug:
-                Logger.log("Session Key: " + str(hex(self.session_key)))
+                Logger.log("Session Key: " + str(self.session_key))
 
             # We are now guaranteed to be talking with our server
             # We also now have a shared session key

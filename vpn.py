@@ -163,6 +163,8 @@ class VpnApp(App):
         state = args[1]
         if state == "down":
             self.settings_panel.add_widget(self.ip_address, 7)
+            self.settings_panel.remove_widget(self.debug_boxlayout)
+            self.settings_panel.remove_widget(self.debug_continue)
             self.chat_panel.write_info("Switched to Client Mode")
     
     # called when 'Server' toggle button is pressed
@@ -170,6 +172,8 @@ class VpnApp(App):
         state = args[1]
         if state == "down":
             self.settings_panel.remove_widget(self.ip_address)
+            self.settings_panel.add_widget(self.debug_boxlayout, 3)
+            self.settings_panel.add_widget(self.debug_continue, 3)
             self.chat_panel.write_info("Switched to Server Mode")
 
     def debug_continue_callback(self, instance):
@@ -361,7 +365,7 @@ class VpnApp(App):
         self.debug_switch = Switch(active=False, size=(300, 50), size_hint=(1, None))
         self.debug_switch.bind(active=self.debug_callback)
         self.debug_boxlayout.add_widget(self.debug_switch)
-        self.settings_panel.add_widget(self.debug_boxlayout)
+        #self.settings_panel.add_widget(self.debug_boxlayout)
 
         # add debug continue button
         self.debug_continue = Button(
@@ -372,7 +376,7 @@ class VpnApp(App):
             disabled=True,
         )
         self.debug_continue.bind(on_press=self.debug_continue_callback)
-        self.settings_panel.add_widget(self.debug_continue)
+        #self.settings_panel.add_widget(self.debug_continue)
 
         # add empty space
         empty_widget = Widget()
