@@ -71,14 +71,14 @@ class ChatPanel(TextInput):
         self.write(server_msg + self.wrapmessage(message))
 
     def wrapmessage(self, message):
-        if (len(message) > 76):
+        if (len(message) > 73):
             wrap = "\n"
             start = 0
-            end = 76
+            end = 73
             while (end < len(message)):
                 wrap += message[start:end] + "\n"
-                start += 76
-                end += 76
+                start += 73
+                end += 73
             wrap += message[start:len(message)]
             return wrap
         else:
@@ -272,13 +272,16 @@ class VpnApp(App):
         
     def send_msg(self, btn):
         msg = self.chat_input.text
-        if self.servermode.state == 'down':
-            self.chat_panel.write_server(msg)
-            self.server.send(msg)
+        if (len(msg) > 500):
+            self.chat_panel.write_info("Input cannot be more than 500 characters")
         else:
-            self.chat_panel.write_client(msg)
-            self.client.send(msg)
-        self.chat_input.text = ""
+            if self.servermode.state == 'down':
+                self.chat_panel.write_server(msg)
+                self.server.send(msg)
+            else:
+                self.chat_panel.write_client(msg)
+                self.client.send(msg)
+            self.chat_input.text = ""
     
     def SettingsEntry(self,text=None):
         boxlayout = BoxLayout(orientation="vertical", padding=30)
